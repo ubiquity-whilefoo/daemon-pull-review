@@ -5,7 +5,7 @@ import { Context } from "../../../types";
 import { ContentBlock } from "@anthropic-ai/sdk/resources";
 import { SuperAnthropic } from "./claude";
 
-interface CompletionsType {
+export interface CompletionsType {
   answer: string;
   groundTruths: string[];
   tokenUsage: {

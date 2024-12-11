@@ -7,10 +7,6 @@ import { processPullRequestDiff } from "./pull-request-parsing";
 export function getIssueNumberFromPayload(payload: Context["payload"], fetchParams?: FetchParams): number {
   let issueNumber, owner, repo;
   if (!fetchParams?.issueNum) {
-    if ("issue" in payload) {
-      issueNumber = payload.issue.number;
-    }
-
     if (!issueNumber && "pull_request" in payload) {
       issueNumber = payload.pull_request.number;
     }
