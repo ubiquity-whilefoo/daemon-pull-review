@@ -1,4 +1,4 @@
-# `@ubiquity-os/command-ask`
+# `@ubiquity-os/pull-precheck`
 
 This is a high context aware GitHub organization integrated bot that uses the Anthopic Claude 3.5 Sonnet model to provide automated reviews and feeback to Github pull requests.
 
