@@ -1,0 +1,37 @@
+{
+  "name": "command-ask",
+  "description": "A highly context aware organization integrated chatbot",
+  "ubiquity:listeners": ["issue_comment.created", "pull_request.opened", "pull_request.ready_for_review"],
+  "skipBotEvents": true,
+  "commands": {
+    "ask": {
+      "ubiquity:example": "/ask",
+      "description": "Ask any question about the repository, issue or pull request",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "description": "Question",
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "configuration": {
+    "type": "object",
+    "properties": {
+      "anthropicAiModel": {
+        "default": "claude-3.5-sonnet",
+        "type": "string"
+      },
+      "anthropicAiBaseUrl": {
+        "type": "string"
+      },
+      "maxTokens": {
+        "default": 10000,
+        "type": "number"
+      }
+    }
+  }
+}
