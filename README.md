@@ -4,7 +4,7 @@ This is a high context aware GitHub organization integrated bot that uses the An
 
 ## Usage
 
-Just convert a pull request to be ready for review and the bot automatically reviews and requests changes if necessary 
+Just convert a pull request to be ready for review and the bot automatically reviews and requests changes if necessary
 
 ## How it works
 

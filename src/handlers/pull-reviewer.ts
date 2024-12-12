@@ -2,7 +2,6 @@ import { customOctokit } from "@ubiquity-os/plugin-sdk/octokit";
 import { logger } from "../helpers/errors";
 import { formatSpecAndPull } from "../helpers/format-spec-and-pull";
 import { fetchIssue } from "../helpers/issue-fetching";
-import { getTaskNumberFromPullRequest } from "../helpers/pull-helpers/get-task-spec";
 import { CodeReviewStatus } from "../types/pull-requests";
 import { fetchRepoLanguageStats, fetchRepoDependencies } from "./ground-truths/fetch-deps";
 import { findGroundTruths } from "./ground-truths/find-ground-truths";
@@ -10,6 +9,8 @@ import { Context } from "../types";
 import { CallbackResult } from "../types/proxy";
 import { hasCollaboratorConvertedPr } from "../helpers/pull-helpers/has-collaborator-converted";
 import { parsePullReviewData } from "../helpers/pull-review-result-parsing";
+import { closedByPullRequestsReferences, IssuesClosedByThisPr } from "../helpers/gql-queries";
+import { getOwnerRepoIssueNumberFromUrl } from "../helpers/get-owner-repo-issue-from-url";
 
 export class PullReviewer {
   context: Context;
@@ -172,7 +173,7 @@ export class PullReviewer {
       },
     } = this.context;
 
-    const taskNumber = await getTaskNumberFromPullRequest(this.context);
+    const taskNumber = await this.getTaskNumberFromPullRequest(this.context);
     const issue = await fetchIssue({
       context: this.context,
       owner: this.context.payload.repository.owner.login,
@@ -231,5 +232,95 @@ export class PullReviewer {
     }
 
     return groundTruths;
+  }
+
+  async checkIfPrClosesIssues(
+    octokit: InstanceType<typeof customOctokit>,
+    pr: {
+      owner: string;
+      repo: string;
+      pr_number: number;
+    }
+  ) {
+    const { owner, repo, pr_number } = pr;
+
+    if (!pr_number) {
+      throw new Error("[checkIfPrClosesIssues]: pr_number is required");
+    }
+    try {
+      const result = await octokit.graphql<IssuesClosedByThisPr>(closedByPullRequestsReferences, {
+        owner,
+        repo,
+        pr_number,
+      });
+
+      const closingIssues = result.repository.pullRequest.closingIssuesReferences.edges.map((edge) => ({
+        number: edge.node.number,
+        title: edge.node.title,
+        url: edge.node.url,
+        body: edge.node.body,
+        repository: {
+          name: edge.node.name,
+          owner: edge.node.owner,
+        },
+      }));
+
+      if (closingIssues.length > 0) {
+        return {
+          closesIssues: true,
+          issues: closingIssues,
+        };
+      } else {
+        return {
+          closesIssues: false,
+          issues: [],
+        };
+      }
+    } catch (error) {
+      console.error("Error fetching closing issues:", error);
+      return {
+        closesIssues: false,
+        issues: [],
+      };
+    }
+  }
+  async getTaskNumberFromPullRequest(context: Context<"pull_request.opened" | "pull_request.ready_for_review">) {
+    const {
+      payload: { pull_request },
+      logger,
+    } = context;
+    let issueNumber;
+
+    const { issues: closingIssues } = await this.checkIfPrClosesIssues(context.octokit, {
+      owner: pull_request.base.repo.owner.login,
+      repo: pull_request.base.repo.name,
+      pr_number: pull_request.number,
+    });
+
+    if (closingIssues.length === 0) {
+      const linkedViaBodyHash = pull_request.body?.match(/#(\d+)/g);
+      const urlMatch = getOwnerRepoIssueNumberFromUrl(pull_request.body);
+
+      if (linkedViaBodyHash?.length) {
+        issueNumber = Number(linkedViaBodyHash[0].replace("#", ""));
+      }
+
+      if (urlMatch && !issueNumber) {
+        issueNumber = Number(urlMatch.issueNumber);
+      }
+    } else if (closingIssues.length > 1) {
+      throw logger.error("Multiple tasks linked to this PR, needs investigated to see how best to handle it.", {
+        closingIssues,
+        pull_request,
+      });
+    } else {
+      issueNumber = closingIssues[0].number;
+    }
+
+    if (!issueNumber) {
+      throw logger.error("Task number not found", { pull_request });
+    }
+
+    return issueNumber;
   }
 }

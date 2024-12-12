@@ -10,10 +10,17 @@ import { logger } from "../src/helpers/errors";
 import { Octokit } from "@octokit/rest";
 import { CompletionsType } from "../src/adapters/claude/helpers/completions";
 import pullTemplate from "./__mocks__/pull-template";
+import { PullReviewer } from "../src/handlers/pull-reviewer";
 
 // Mock constants
 const MOCK_ANSWER_PASSED = "{confidenceThreshold: 1, reviewComment: 'passed'}";
 // const MOCK_ANSWER_FAILED = "{confidenceThreshold: 0, reviewComment: 'failed'}";
+
+jest.unstable_mockModule("../src/helpers/pull-helpers/fetch-diff", () => ({
+  fetchPullRequestDiff: jest.fn(() => ({
+    diff: "abc",
+  })),
+}));
 
 beforeAll(() => {
   server.listen();
@@ -33,7 +40,11 @@ describe("Ask plugin tests", () => {
   });
 
   it("temp", async () => {
-    return createContext();
+    const pullReviewer = new PullReviewer(createContext());
+    jest.spyOn(pullReviewer, "canPerformReview").mockImplementation(async () => true);
+    jest.spyOn(pullReviewer, "getTaskNumberFromPullRequest").mockImplementation(async () => 1);
+    console.log(await pullReviewer.reviewPull());
+    expect(undefined).toBeDefined();
   });
 });
 
@@ -73,7 +84,7 @@ function createContext() {
     config: {},
     env: {
       UBIQUITY_OS_APP_NAME: "UbiquityOS",
-      ANTHOPIC_API_KEY: "test",
+      ANTHROPIC_API_KEY: "test",
     },
     adapters: {
       anthropic: {

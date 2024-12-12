@@ -1,6 +1,6 @@
 import { encode } from "gpt-tokenizer";
-import { TokenLimits } from "../types/llm";
-import { logger } from "./errors";
+import { TokenLimits } from "../../types/llm";
+import { logger } from "../errors";
 import { EncodeOptions } from "gpt-tokenizer/esm/GptEncoding";
 
 export async function processPullRequestDiff(diff: string, tokenLimits: TokenLimits) {

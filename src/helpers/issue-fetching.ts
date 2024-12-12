@@ -1,8 +1,6 @@
 import { Context } from "../types";
 import { FetchParams, Issue } from "../types/github-types";
-import { TokenLimits } from "../types/llm";
 import { logger } from "./errors";
-import { processPullRequestDiff } from "./pull-request-parsing";
 
 export function getIssueNumberFromPayload(payload: Context["payload"], fetchParams?: FetchParams): number {
   let issueNumber, owner, repo;
@@ -26,27 +24,6 @@ export function getIssueNumberFromPayload(payload: Context["payload"], fetchPara
     });
   }
   return issueNumber;
-}
-
-export async function fetchPullRequestDiff(context: Context, org: string, repo: string, issue: number, tokenLimits: TokenLimits) {
-  const { octokit } = context;
-  let diff: string;
-
-  try {
-    const diffResponse = await octokit.rest.pulls.get({
-      owner: org,
-      repo,
-      pull_number: issue,
-      mediaType: { format: "diff" },
-    });
-
-    diff = diffResponse.data as unknown as string;
-  } catch (e) {
-    logger.error(`Error fetching PR data`, { owner: org, repo, issue, err: String(e) });
-    return { diff: null };
-  }
-
-  return await processPullRequestDiff(diff, tokenLimits);
 }
 
 export async function fetchIssue(params: FetchParams): Promise<Issue | null> {

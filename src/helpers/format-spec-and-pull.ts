@@ -1,8 +1,9 @@
 import { Context } from "../types";
 import { TokenLimits } from "../types/llm";
 import { createKey } from "../handlers/key";
-import { fetchPullRequestDiff, fetchIssue } from "./issue-fetching";
+import { fetchIssue } from "./issue-fetching";
 import { Issue } from "../types/github-types";
+import { fetchPullRequestDiff } from "./pull-helpers/fetch-diff";
 
 export async function formatSpecAndPull(context: Context<"pull_request.opened" | "pull_request.ready_for_review">, issue: Issue): Promise<string[]> {
   const tokenLimits: TokenLimits = {
