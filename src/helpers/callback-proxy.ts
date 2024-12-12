@@ -1,4 +1,4 @@
-import { performPullPrecheck } from "../handlers/pull-request-callback";
+import { PullReviewer } from "../handlers/pull-reviewer";
 import { Context, SupportedEvents } from "../types";
 import { CallbackResult, ProxyCallbacks } from "../types/proxy";
 import { bubbleUpErrorComment } from "./errors";
@@ -11,8 +11,8 @@ import { bubbleUpErrorComment } from "./errors";
  * us to add more callbacks for a particular event without modifying the core logic.
  */
 const callbacks = {
-  "pull_request.opened": [performPullPrecheck],
-  "pull_request.ready_for_review": [performPullPrecheck],
+  "pull_request.opened": [(context: Context) => new PullReviewer(context).performPullPrecheck()],
+  "pull_request.ready_for_review": [(context: Context) => new PullReviewer(context).performPullPrecheck()],
 } as ProxyCallbacks;
 
 export async function callCallbacks(context: Context, eventName: SupportedEvents): Promise<CallbackResult> {
@@ -38,6 +38,9 @@ export async function callCallbacks(context: Context, eventName: SupportedEvents
  * We can trust that the `ProxyCallbacks` type has already ensured that each callback function
  * matches the expected event and payload types, so this function provides a safe and
  * flexible way to handle callbacks without introducing type or logic errors.
+ *
+ * In this updated version, the callbacks are arrow functions that instantiate the PullReviewer
+ * class and call its methods, rather than standalone functions.
  */
 // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 export function handleCallback(callback: Function, context: Context) {

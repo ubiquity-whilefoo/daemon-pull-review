@@ -92,4 +92,23 @@ export const handlers = [
       },
     ])
   ),
+
+  http.get("https://api.github.com/repos/:owner/:repo/issues/:issue_number/events", () => {
+    HttpResponse.json([
+      {
+        id: 1,
+        event: "labeled",
+        created_at: "2024-01-01T00:00:00Z",
+        actor: {
+          login: "user1",
+          id: 1,
+          type: "User",
+        },
+        label: {
+          name: "bug",
+          color: "red",
+        },
+      },
+    ]);
+  }),
 ];
