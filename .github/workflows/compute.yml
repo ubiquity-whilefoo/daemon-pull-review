@@ -1,4 +1,4 @@
-name: "@ubiquity-os-marketplace/command-ask"
+name: "@ubiquity-os-marketplace/pull-precheck"
 
 on:
   workflow_dispatch:
@@ -22,7 +22,7 @@ on:
 
 jobs:
   compute:
-    name: "LLM Reply"
+    name: "Pull review"
     runs-on: ubuntu-latest
     permissions: write-all
     environment: ${{ github.ref == 'refs/heads/main' && 'main' || 'development' }}
@@ -37,7 +37,7 @@ jobs:
 
       - name: execute directive
         run: node ./dist/index.js
-        id: command-ask
+        id: pull-precheck
         env:
           KERNEL_PUBLIC_KEY: ${{ secrets.KERNEL_PUBLIC_KEY }}
           PLUGIN_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

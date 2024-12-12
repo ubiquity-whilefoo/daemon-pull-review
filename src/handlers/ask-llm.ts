@@ -40,10 +40,10 @@ export async function pullReview(context: Context<"pull_request.opened" | "pull_
   if (!languages.length) {
     groundTruths.push("No languages found in the repository");
   }
-  if (!Reflect.ownKeys(dependencies).length) {
+  if (dependencies && !Reflect.ownKeys(dependencies).length) {
     groundTruths.push("No dependencies found in the repository");
   }
-  if (!Reflect.ownKeys(devDependencies).length) {
+  if (devDependencies && !Reflect.ownKeys(devDependencies).length) {
     groundTruths.push("No devDependencies found in the repository");
   }
 
