@@ -1,5 +1,5 @@
 {
-  "name": "pull-precheck",
+  "name": "daemon-pull-review",
   "description": "A highly context aware organization integrated chatbot",
   "ubiquity:listeners": ["pull_request.opened", "pull_request.ready_for_review"],
   "skipBotEvents": true,

@@ -1,5 +1,5 @@
 {
-  "name": "@ubiquity-os/pull-precheck",
+  "name": "@ubiquity-os/daemon-pull-review",
   "version": "1.0.0",
   "description": "A highly context aware organization integrated review bot",
   "author": "Ubiquity DAO",

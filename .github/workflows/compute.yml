@@ -1,4 +1,4 @@
-name: "@ubiquity-os-marketplace/pull-precheck"
+name: "@ubiquity-os-marketplace/daemon-pull-review"
 
 on:
   workflow_dispatch:
@@ -37,7 +37,7 @@ jobs:
 
       - name: execute directive
         run: node ./dist/index.js
-        id: pull-precheck
+        id: daemon-pull-review
         env:
           KERNEL_PUBLIC_KEY: ${{ secrets.KERNEL_PUBLIC_KEY }}
           PLUGIN_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

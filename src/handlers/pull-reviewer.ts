@@ -301,7 +301,7 @@ export class PullReviewer {
   parsePullReviewData(input: string) {
     try {
       const parsedInput = parseLooseJson<{ confidenceThreshold: number; reviewComment: string }>(input);
-      console.error(parsedInput);
+
       const { confidenceThreshold: rawThreshold, reviewComment: rawComment } = parsedInput;
 
       if (typeof rawThreshold !== "number" && (typeof rawThreshold !== "string" || isNaN(Number(rawThreshold)))) {
