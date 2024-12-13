@@ -1,25 +1,11 @@
-import { Octokit } from "@octokit/rest";
-import { EmitterWebhookEvent as WebhookEvent, EmitterWebhookEventName as WebhookEventName } from "@octokit/webhooks";
+import { Context as PluginContext } from "@ubiquity-os/plugin-sdk";
+import { PluginSettings } from "./plugin-input";
 import { Env } from "./env";
-import { PluginSettings } from "./plugin-inputs";
-import { Logs } from "@ubiquity-dao/ubiquibot-logger";
+import { createAdapters } from "../adapters";
+import { Command } from "./command";
 
-/**
- * Update `manifest.json` with any events you want to support like so:
- *
- * ubiquity:listeners: ["issue_comment.created", ...]
- */
-export type SupportedEventsU = "issue_comment.created";
+export type SupportedEvents = "pull_request.opened" | "pull_request.ready_for_review";
 
-export type SupportedEvents = {
-  [K in SupportedEventsU]: K extends WebhookEventName ? WebhookEvent<K> : never;
+export type Context<TEvents extends SupportedEvents = SupportedEvents> = PluginContext<PluginSettings, Env, Command, TEvents> & {
+  adapters: ReturnType<typeof createAdapters>;
 };
-
-export interface Context<T extends SupportedEventsU = SupportedEventsU, TU extends SupportedEvents[T] = SupportedEvents[T]> {
-  eventName: T;
-  payload: TU["payload"];
-  octokit: InstanceType<typeof Octokit>;
-  config: PluginSettings;
-  env: Env;
-  logger: Logs;
-}

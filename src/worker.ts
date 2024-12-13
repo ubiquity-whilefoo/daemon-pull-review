@@ -1,53 +1,32 @@
+import { createPlugin } from "@ubiquity-os/plugin-sdk";
+import type { ExecutionContext } from "hono";
+import { createAdapters } from "./adapters";
+import { SupportedEvents } from "./types/context";
+import { Env, envSchema } from "./types/env";
+import { PluginSettings, pluginSettingsSchema } from "./types/plugin-input";
 import manifest from "../manifest.json";
-import { validateAndDecodeSchemas } from "./helpers/validator";
+import { Command } from "./types/command";
 import { plugin } from "./plugin";
-import { Env } from "./types";
+import { Manifest } from "@ubiquity-os/plugin-sdk/manifest";
+import { LogLevel } from "@ubiquity-os/ubiquity-os-logger";
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    try {
-      const url = new URL(request.url);
-      if (url.pathname === "/manifest") {
-        if (request.method === "GET") {
-          return new Response(JSON.stringify(manifest), {
-            headers: { "content-type": "application/json" },
-          });
-        } else if (request.method === "POST") {
-          const webhookPayload = await request.json();
-
-          validateAndDecodeSchemas(env, webhookPayload.settings);
-          return new Response(JSON.stringify({ message: "Schema is valid" }), { status: 200, headers: { "content-type": "application/json" } });
-        }
-      }
-      if (request.method !== "POST") {
-        return new Response(JSON.stringify({ error: `Only POST requests are supported.` }), {
-          status: 405,
-          headers: { "content-type": "application/json", Allow: "POST" },
+  async fetch(request: Request, env: Env, executionCtx?: ExecutionContext) {
+    return createPlugin<PluginSettings, Env, Command, SupportedEvents>(
+      (context) => {
+        return plugin({
+          ...context,
+          adapters: {} as ReturnType<typeof createAdapters>,
         });
+      },
+      manifest as Manifest,
+      {
+        envSchema: envSchema,
+        postCommentOnError: true,
+        settingsSchema: pluginSettingsSchema,
+        logLevel: env.LOG_LEVEL as LogLevel,
+        kernelPublicKey: env.KERNEL_PUBLIC_KEY,
       }
-      const contentType = request.headers.get("content-type");
-      if (contentType !== "application/json") {
-        return new Response(JSON.stringify({ error: `Error: ${contentType} is not a valid content type` }), {
-          status: 400,
-          headers: { "content-type": "application/json" },
-        });
-      }
-
-      const webhookPayload = await request.json();
-      const { decodedSettings, decodedEnv } = validateAndDecodeSchemas(env, webhookPayload.settings);
-
-      webhookPayload.env = decodedEnv;
-      webhookPayload.settings = decodedSettings;
-      await plugin(webhookPayload, decodedEnv);
-      return new Response(JSON.stringify("OK"), { status: 200, headers: { "content-type": "application/json" } });
-    } catch (error) {
-      return handleUncaughtError(error);
-    }
+    ).fetch(request, env, executionCtx);
   },
 };
-
-function handleUncaughtError(error: unknown) {
-  console.error(error);
-  const status = 500;
-  return new Response(JSON.stringify({ error }), { status: status, headers: { "content-type": "application/json" } });
-}

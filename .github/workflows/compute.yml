@@ -1,4 +1,4 @@
-name: "the name of the plugin"
+name: "@ubiquity-os-marketplace/pull-precheck"
 
 on:
   workflow_dispatch:
@@ -16,16 +16,16 @@ on:
       ref:
         description: "Ref"
       signature:
-        description: "The kernel signature"
+        description: "Signature sent from the Kernel"
+      command:
+        description: "Command"
 
 jobs:
   compute:
-    name: "plugin name"
+    name: "Pull review"
     runs-on: ubuntu-latest
     permissions: write-all
-    env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    environment: ${{ github.ref == 'refs/heads/main' && 'main' || 'development' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -35,12 +35,11 @@ jobs:
         with:
           node-version: "20.10.0"
 
-      - name: install dependencies
-        run: yarn
-
       - name: execute directive
-        run: npx tsx ./src/main.ts
-        id: plugin-name
+        run: node ./dist/index.js
+        id: pull-precheck
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          KERNEL_PUBLIC_KEY: ${{ secrets.KERNEL_PUBLIC_KEY }}
+          PLUGIN_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          UBIQUITY_OS_APP_NAME: ${{ secrets.UBIQUITY_OS_APP_NAME }}

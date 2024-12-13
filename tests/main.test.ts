@@ -1,160 +1,183 @@
-import { drop } from "@mswjs/data";
 import { db } from "./__mocks__/db";
 import { server } from "./__mocks__/node";
-import { expect, describe, beforeAll, beforeEach, afterAll, afterEach, it } from "@jest/globals";
-import { Context } from "../src/types/context";
+import usersGet from "./__mocks__/users-get.json";
+import { describe, beforeAll, beforeEach, afterAll, afterEach, it, jest } from "@jest/globals";
+import { Context, SupportedEvents } from "../src/types";
+import { drop } from "@mswjs/data";
+import issueTemplate from "./__mocks__/issue-template";
+import repoTemplate from "./__mocks__/repo-template";
+import { logger } from "../src/helpers/errors";
 import { Octokit } from "@octokit/rest";
-import { STRINGS } from "./__mocks__/strings";
-import { createComment, setupTests } from "./__mocks__/helpers";
-import manifest from "../manifest.json";
-import dotenv from "dotenv";
-import { Logs } from "@ubiquity-dao/ubiquibot-logger";
-import { Env } from "../src/types";
-import { runPlugin } from "../src/plugin";
+import { CompletionsType } from "../src/adapters/claude/helpers/completions";
+import pullTemplate from "./__mocks__/pull-template";
 
-dotenv.config();
-jest.requireActual("@octokit/rest");
-const octokit = new Octokit();
+// Mock constants
+const MOCK_ANSWER_PASSED = "{confidenceThreshold: 1, reviewComment: 'passed'}";
+
+jest.unstable_mockModule("../src/helpers/pull-helpers/fetch-diff", () => ({
+  fetchPullRequestDiff: jest.fn(() => ({
+    diff: "abc",
+  })),
+}));
 
 beforeAll(() => {
   server.listen();
 });
+
 afterEach(() => {
+  drop(db);
   server.resetHandlers();
-  jest.clearAllMocks();
 });
+
 afterAll(() => server.close());
 
-describe("Plugin tests", () => {
+jest.unstable_mockModule("../src/helpers/pull-helpers/fetch-diff", () => ({
+  fetchPullRequestDiff: jest.fn(() => ({
+    diff: "abc",
+  })),
+}));
+
+beforeAll(() => {
+  server.listen();
+});
+
+afterEach(() => {
+  drop(db);
+  server.resetHandlers();
+});
+
+afterAll(() => server.close());
+
+describe("Pull Reviewer tests", () => {
   beforeEach(async () => {
-    drop(db);
+    jest.clearAllMocks();
     await setupTests();
   });
 
-  it("Should serve the manifest file", async () => {
-    const worker = (await import("../src/worker")).default;
-    const response = await worker.fetch(new Request("http://localhost/manifest"), {});
-    const content = await response.json();
-    expect(content).toEqual(manifest);
-  });
+  describe("Perform pull precheck", () => {
+    it("should skip review for draft PRs", async () => {
+      const { PullReviewer } = await import("../src/handlers/pull-reviewer");
+      const context = createContext();
+      context.payload.pull_request.draft = true;
+      const pullReviewer = new PullReviewer(context);
 
-  it("Should handle an issue comment event", async () => {
-    const { context, infoSpy, errorSpy, debugSpy, okSpy, verboseSpy } = createContext();
-
-    expect(context.eventName).toBe("issue_comment.created");
-    expect(context.payload.comment.body).toBe("/Hello");
-
-    await runPlugin(context);
-
-    expect(errorSpy).not.toHaveBeenCalled();
-    expect(debugSpy).toHaveBeenNthCalledWith(1, STRINGS.EXECUTING_HELLO_WORLD, {
-      caller: STRINGS.CALLER_LOGS_ANON,
-      sender: STRINGS.USER_1,
-      repo: STRINGS.TEST_REPO,
-      issueNumber: 1,
-      owner: STRINGS.USER_1,
+      const result = await pullReviewer.performPullPrecheck();
+      expect(result.status).toBe(200);
+      expect(result.reason).toContain("draft mode");
     });
-    expect(infoSpy).toHaveBeenNthCalledWith(1, STRINGS.HELLO_WORLD);
-    expect(okSpy).toHaveBeenNthCalledWith(1, STRINGS.SUCCESSFULLY_CREATED_COMMENT);
-    expect(verboseSpy).toHaveBeenNthCalledWith(1, STRINGS.EXITING_HELLO_WORLD);
+
+    it("should skip review for closed PRs", async () => {
+      const { PullReviewer } = await import("../src/handlers/pull-reviewer");
+      const context = createContext();
+      context.payload.pull_request.state = "closed";
+      const pullReviewer = new PullReviewer(context);
+
+      const result = await pullReviewer.performPullPrecheck();
+      expect(result.status).toBe(200);
+      expect(result.reason).toContain("closed");
+    });
+
+    it("should handle successful review", async () => {
+      const { PullReviewer } = await import("../src/handlers/pull-reviewer");
+      const pullReviewer = new PullReviewer(createContext());
+      jest.spyOn(pullReviewer, "canPerformReview").mockImplementation(async () => true);
+      jest.spyOn(pullReviewer, "getTaskNumberFromPullRequest").mockImplementation(async () => 1);
+      jest.spyOn(pullReviewer, "submitCodeReview").mockImplementation(async () => {});
+
+      const result = await pullReviewer.performPullPrecheck();
+      expect(result).toEqual({ status: 200, reason: "Success" });
+    });
   });
 
-  it("Should respond with `Hello, World!` in response to /Hello", async () => {
-    const { context } = createContext();
-    await runPlugin(context);
-    const comments = db.issueComments.getAll();
-    expect(comments.length).toBe(2);
-    expect(comments[1].body).toBe(STRINGS.HELLO_WORLD);
+  it("should successfully submit a code review", async () => {
+    const { PullReviewer } = await import("../src/handlers/pull-reviewer");
+    const context = createContext();
+    const pullReviewer = new PullReviewer(context);
+
+    context.octokit.rest.pulls.createReview = jest
+      .fn()
+      .mockReturnValue({ data: { html_url: "abc" } }) as unknown as typeof context.octokit.rest.pulls.createReview;
+
+    await pullReviewer.submitCodeReview("Great job!", "COMMENT");
+
+    expect(context.octokit.rest.pulls.createReview).toHaveBeenCalledWith({
+      owner: "ubiquity",
+      repo: "test-repo",
+      pull_number: 3,
+      body: "Great job!",
+      event: "COMMENT",
+    });
   });
 
-  it("Should respond with `Hello, Code Reviewers` in response to /Hello", async () => {
-    const { context } = createContext(STRINGS.CONFIGURABLE_RESPONSE);
-    await runPlugin(context);
-    const comments = db.issueComments.getAll();
-    expect(comments.length).toBe(2);
-    expect(comments[1].body).toBe(STRINGS.CONFIGURABLE_RESPONSE);
-  });
+  it("should correctly parse valid review data", async () => {
+    const { PullReviewer } = await import("../src/handlers/pull-reviewer");
+    const pullReviewer = new PullReviewer(createContext());
 
-  it("Should not respond to a comment that doesn't contain /Hello", async () => {
-    const { context, errorSpy } = createContext(STRINGS.CONFIGURABLE_RESPONSE, STRINGS.INVALID_COMMAND);
-    await runPlugin(context);
-    const comments = db.issueComments.getAll();
-
-    expect(comments.length).toBe(1);
-    expect(errorSpy).toHaveBeenNthCalledWith(1, STRINGS.INVALID_USE_OF_SLASH_COMMAND, { caller: STRINGS.CALLER_LOGS_ANON, body: STRINGS.INVALID_COMMAND });
+    const result = pullReviewer.parsePullReviewData(MOCK_ANSWER_PASSED);
+    expect(result).toEqual({
+      confidenceThreshold: 1,
+      reviewComment: "passed",
+    });
   });
 });
 
-/**
- * The heart of each test. This function creates a context object with the necessary data for the plugin to run.
- *
- * So long as everything is defined correctly in the db (see `./__mocks__/helpers.ts: setupTests()`),
- * this function should be able to handle any event type and the conditions that come with it.
- *
- * Refactor according to your needs.
- */
-function createContext(
-  configurableResponse: string = "Hello, world!", // we pass the plugin configurable items here
-  commentBody: string = "/Hello",
-  repoId: number = 1,
-  payloadSenderId: number = 1,
-  commentId: number = 1,
-  issueOne: number = 1
-) {
-  const repo = db.repo.findFirst({ where: { id: { equals: repoId } } }) as unknown as Context["payload"]["repository"];
-  const sender = db.users.findFirst({ where: { id: { equals: payloadSenderId } } }) as unknown as Context["payload"]["sender"];
-  const issue1 = db.issue.findFirst({ where: { id: { equals: issueOne } } }) as unknown as Context["payload"]["issue"];
-
-  createComment(commentBody, commentId); // create it first then pull it from the DB and feed it to _createContext
-  const comment = db.issueComments.findFirst({ where: { id: { equals: commentId } } }) as unknown as Context["payload"]["comment"];
-
-  const context = createContextInner(repo, sender, issue1, comment, configurableResponse);
-  const infoSpy = jest.spyOn(context.logger, "info");
-  const errorSpy = jest.spyOn(context.logger, "error");
-  const debugSpy = jest.spyOn(context.logger, "debug");
-  const okSpy = jest.spyOn(context.logger, "ok");
-  const verboseSpy = jest.spyOn(context.logger, "verbose");
-
-  return {
-    context,
-    infoSpy,
-    errorSpy,
-    debugSpy,
-    okSpy,
-    verboseSpy,
-    repo,
-    issue1,
-  };
+async function setupTests() {
+  // Setup test data
+  for (const item of usersGet) {
+    db.users.create(item);
+  }
+  db.repo.create({
+    ...repoTemplate,
+  });
+  db.issue.create({
+    ...issueTemplate,
+  });
+  db.pull.create({ ...pullTemplate });
 }
 
-/**
- * Creates the context object central to the plugin.
- *
- * This should represent the active `SupportedEvents` payload for any given event.
- */
-function createContextInner(
-  repo: Context["payload"]["repository"],
-  sender: Context["payload"]["sender"],
-  issue: Context["payload"]["issue"],
-  comment: Context["payload"]["comment"],
-  configurableResponse: string
-): Context {
+function createContext() {
+  const user = db.users.findFirst({ where: { id: { equals: 1 } } });
   return {
-    eventName: "issue_comment.created",
     payload: {
-      action: "created",
-      sender: sender,
-      repository: repo,
-      issue: issue,
-      comment: comment,
-      installation: { id: 1 } as Context["payload"]["installation"],
-      organization: { login: STRINGS.USER_1 } as Context["payload"]["organization"],
+      pull_request: db.pull.findFirst({ where: { id: { equals: 3 } } }) as unknown as Context["payload"]["pull_request"],
+      sender: user,
+      repository: db.repo.findFirst({ where: { id: { equals: 1 } } }) as unknown as Context["payload"]["repository"],
+      action: "ready_for_review" as string,
+      installation: { id: 1 } as unknown as Context["payload"]["installation"],
+      organization: { login: "ubiquity" } as unknown as Context["payload"]["organization"],
+      number: 3,
     },
-    logger: new Logs("debug"),
-    config: {
-      configurableResponse,
+    command: {
+      name: null,
+      parameters: null,
     },
-    env: {} as Env,
-    octokit: octokit,
-  };
+    owner: "ubiquity",
+    repo: "test-repo",
+    logger: logger,
+    config: {},
+    env: {
+      UBIQUITY_OS_APP_NAME: "UbiquityOS",
+      ANTHROPIC_API_KEY: "test",
+    },
+    adapters: {
+      anthropic: {
+        completions: {
+          getModelMaxTokenLimit: () => 50000,
+          getModelMaxOutputLimit: () => 50000,
+          createCompletion: async (): Promise<CompletionsType> => ({
+            answer: MOCK_ANSWER_PASSED,
+            groundTruths: [""],
+            tokenUsage: {
+              input: 1000,
+              output: 150,
+              total: 1150,
+            },
+          }),
+          createGroundTruthCompletion: async (): Promise<string> => `[""]`,
+        },
+      },
+    },
+    octokit: new Octokit(),
+    eventName: "pull_request.ready_for_review" as SupportedEvents,
+  } as unknown as Context;
 }

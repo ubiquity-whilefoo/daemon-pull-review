@@ -1,7 +1,7 @@
 import { Type as T } from "@sinclair/typebox";
 import { StaticDecode } from "@sinclair/typebox";
-import "dotenv/config";
-import { StandardValidator } from "typebox-validators";
+import dotenv from "dotenv";
+dotenv.config();
 
 /**
  * Define sensitive environment variables here.
@@ -10,8 +10,11 @@ import { StandardValidator } from "typebox-validators";
  * taken from either `dev.vars` or repository secrets.
  * They are used with `process.env` but are type-safe.
  */
-export const envSchema = T.Object({});
-
-export const envValidator = new StandardValidator(envSchema);
+export const envSchema = T.Object({
+  ANTHROPIC_API_KEY: T.String(),
+  UBIQUITY_OS_APP_NAME: T.String({ default: "UbiquityOS" }),
+  KERNEL_PUBLIC_KEY: T.Optional(T.String()),
+  LOG_LEVEL: T.Optional(T.String()),
+});
 
 export type Env = StaticDecode<typeof envSchema>;

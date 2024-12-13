@@ -9,16 +9,12 @@ export default tsEslint.config({
     "@typescript-eslint": tsEslint.plugin,
     "check-file": checkFile,
   },
-  ignores: [".github/knip.ts"],
+  ignores: [".github/knip.ts", ".wrangler/**/*.ts", ".wrangler/**/*.js", "dist/**", "eslint.config.mjs"],
   extends: [eslint.configs.recommended, ...tsEslint.configs.recommended, sonarjs.configs.recommended],
   languageOptions: {
     parser: tsEslint.parser,
     parserOptions: {
-      projectService: {
-        defaultProject: "tsconfig.json",
-        allowDefaultProject: ["*.mjs"],
-      },
-      tsconfigRootDir: import.meta.dirname,
+      project: ["./tsconfig.json"],
     },
   },
   rules: {
@@ -69,12 +65,6 @@ export default tsEslint.config({
     "sonarjs/no-element-overwrite": "error",
     "sonarjs/no-identical-conditions": "error",
     "sonarjs/no-identical-expressions": "error",
-    "sonarjs/new-cap": "off",
-    "sonarjs/different-types-comparison": "off",
-    "sonarjs/sonar-prefer-regexp-exec": "off",
-    "sonarjs/function-return-type": "off",
-    "sonarjs/no-misleading-array-reverse": "off",
-    "sonarjs/slow-regex": "off",
     "@typescript-eslint/naming-convention": [
       "error",
       {
