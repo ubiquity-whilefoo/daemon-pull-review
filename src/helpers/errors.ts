@@ -1,5 +1,5 @@
 import { LogReturn, Logs } from "@ubiquity-os/ubiquity-os-logger";
-import { Context } from "../types";
+import { Context } from "../types/context";
 import { addCommentToIssue } from "../handlers/add-comment";
 export const logger = new Logs("debug");
 

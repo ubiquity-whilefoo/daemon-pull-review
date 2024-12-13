@@ -26,11 +26,8 @@ function isTextBlock(content: ContentBlock): content is TextBlock {
 }
 
 export class AnthropicCompletion extends SuperAnthropic {
-  protected context: Context;
-
   constructor(client: Anthropic, context: Context) {
     super(client, context);
-    this.context = context;
   }
 
   getModelMaxTokenLimit(model: string): number {
@@ -47,7 +44,7 @@ export class AnthropicCompletion extends SuperAnthropic {
 
   async createCompletion(
     model: string = "claude-3.5-sonnet",
-    localContext: string[],
+    localContext: string,
     groundTruths: string[],
     botName: string,
     maxTokens: number
@@ -60,7 +57,7 @@ export class AnthropicCompletion extends SuperAnthropic {
       `Your name is: ${botName}`,
       "\n",
       "Main Context (Provide additional precedence in terms of information): ",
-      localContext.join("\n"),
+      localContext,
     ].join("\n");
 
     this.context.logger.info(`System message: ${sysMsg}`);
@@ -77,6 +74,10 @@ export class AnthropicCompletion extends SuperAnthropic {
       max_tokens: maxTokens,
       temperature: 0,
     });
+
+    if (!res.content || res.content.length === 0) {
+      throw this.context.logger.error("Unexpected no response from claude");
+    }
 
     // Use type guard to safely handle the response
     const content = res.content[0];
@@ -124,6 +125,10 @@ export class AnthropicCompletion extends SuperAnthropic {
         },
       ],
     });
+
+    if (!res.content || res.content.length === 0) {
+      throw this.context.logger.error("Unexpected no response from ");
+    }
 
     const content = res.content[0];
     if (!isTextBlock(content)) {

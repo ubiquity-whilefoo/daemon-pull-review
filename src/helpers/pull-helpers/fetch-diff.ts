@@ -1,4 +1,4 @@
-import { Context } from "../../types";
+import { Context } from "../../types/context";
 import { TokenLimits } from "../../types/llm";
 import { processPullRequestDiff } from "./pull-request-parsing";
 

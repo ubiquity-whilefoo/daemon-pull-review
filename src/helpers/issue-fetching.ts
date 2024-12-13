@@ -1,49 +1,22 @@
-import { Context } from "../types";
-import { FetchParams, Issue } from "../types/github-types";
-import { logger } from "./errors";
+import { Context } from "../types/context";
+import { Issue } from "../types/github-types";
 
-export function getIssueNumberFromPayload(payload: Context["payload"], fetchParams?: FetchParams): number {
-  let issueNumber, owner, repo;
-  if (!fetchParams?.issueNum) {
-    if (!issueNumber && "pull_request" in payload) {
-      issueNumber = payload.pull_request.number;
-    }
-  } else issueNumber = fetchParams.issueNum;
-
-  // takes precedence and overrides the payload
-  if (fetchParams) {
-    owner = fetchParams.owner;
-    repo = fetchParams.repo;
-  }
-
-  if (!issueNumber) {
-    throw logger.error(`Error fetching issue`, {
-      owner: owner || payload.repository.owner.login,
-      repo: repo || payload.repository.name,
-      issue_number: issueNumber,
-    });
-  }
-  return issueNumber;
-}
-
-export async function fetchIssue(params: FetchParams): Promise<Issue | null> {
-  const { octokit, payload, logger } = params.context;
-  const { owner, repo } = params;
-  const issueNumber = getIssueNumberFromPayload(payload, params);
+export async function fetchIssue(context: Context, issueNum?: number): Promise<Issue | null> {
+  const { payload, logger, octokit } = context;
 
   try {
     const response = await octokit.rest.issues.get({
-      owner: owner || payload.repository.owner.login,
-      repo: repo || payload.repository.name,
-      issue_number: issueNumber,
+      owner: payload.repository.owner.login,
+      repo: payload.repository.name,
+      issue_number: issueNum ?? payload.pull_request.number,
     });
     return response.data;
   } catch (error) {
     logger.error(`Error fetching issue`, {
       err: error,
-      owner: owner || payload.repository.owner.login,
-      repo: repo || payload.repository.name,
-      issue_number: issueNumber,
+      owner: payload.repository.owner.login,
+      repo: payload.repository.name,
+      issue_number: payload.pull_request.number,
     });
     return null;
   }

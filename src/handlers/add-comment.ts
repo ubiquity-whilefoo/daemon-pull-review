@@ -1,5 +1,4 @@
 import { Context } from "../types/context";
-import { getIssueNumberFromPayload } from "../helpers/issue-fetching";
 /**
  * Add a comment to an issue
  * @param context - The context object containing environment and configuration details
@@ -8,17 +7,11 @@ import { getIssueNumberFromPayload } from "../helpers/issue-fetching";
 
 export async function addCommentToIssue(context: Context, message: string, issueNum?: number) {
   const { payload } = context;
-  const issueNumber = getIssueNumberFromPayload(context.payload, {
-    issueNum,
-    context: context,
-    owner: payload.repository.owner.login,
-    repo: payload.repository.name,
-  });
   try {
     await context.octokit.rest.issues.createComment({
       owner: payload.repository.owner.login,
       repo: payload.repository.name,
-      issue_number: issueNumber,
+      issue_number: issueNum ?? context.payload.pull_request.number,
       body: message,
     });
   } catch (e: unknown) {

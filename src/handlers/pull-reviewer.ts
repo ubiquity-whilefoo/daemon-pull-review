@@ -1,4 +1,3 @@
-import { customOctokit } from "@ubiquity-os/plugin-sdk/octokit";
 import { logger } from "../helpers/errors";
 import { formatSpecAndPull } from "../helpers/format-spec-and-pull";
 import { fetchIssue } from "../helpers/issue-fetching";
@@ -7,10 +6,8 @@ import { fetchRepoLanguageStats, fetchRepoDependencies } from "./ground-truths/f
 import { findGroundTruths } from "./ground-truths/find-ground-truths";
 import { Context } from "../types";
 import { CallbackResult } from "../types/proxy";
-import { hasCollaboratorConvertedPr } from "../helpers/pull-helpers/has-collaborator-converted";
-import { parsePullReviewData } from "../helpers/pull-review-result-parsing";
+import { parseLooseJson } from "../helpers/loose-json-parsing";
 import { closedByPullRequestsReferences, IssuesClosedByThisPr } from "../helpers/gql-queries";
-import { getOwnerRepoIssueNumberFromUrl } from "../helpers/get-owner-repo-issue-from-url";
 
 export class PullReviewer {
   context: Context;
@@ -35,8 +32,6 @@ export class PullReviewer {
       return { status: 200, reason: logger.info("PR is closed, no action required").logMessage.raw };
     } else if (!(await this.canPerformReview())) {
       return { status: 200, reason: logger.info("Cannot perform review at this time").logMessage.raw };
-    } else if (await hasCollaboratorConvertedPr(this.context)) {
-      return { status: 200, reason: logger.info("Collaborator has converted the PR, no action required").logMessage.raw };
     }
 
     return await this._handleCodeReview();
@@ -49,14 +44,11 @@ export class PullReviewer {
   private async _handleCodeReview(): Promise<CallbackResult> {
     const { payload } = this.context;
     const pullReviewData = await this.reviewPull();
-    const { reviewComment, confidenceThreshold } = parsePullReviewData(pullReviewData.answer);
+    const { reviewComment, confidenceThreshold } = this.parsePullReviewData(pullReviewData.answer);
 
-    this.context.logger.info(
-      await this.convertPullToDraft(confidenceThreshold < 0.5, {
-        nodeId: payload.pull_request.node_id,
-        octokit: this.context.octokit,
-      })
-    );
+    if (confidenceThreshold < 0.5) {
+      await this.convertPullToDraft(payload.pull_request.node_id, this.context.octokit);
+    }
 
     await this.submitCodeReview(reviewComment, confidenceThreshold > 0.5 ? "COMMENT" : "REQUEST_CHANGES");
     return { status: 200, reason: "Success" };
@@ -130,19 +122,9 @@ export class PullReviewer {
    * @param shouldConvert - Whether to convert the PR to draft
    * @param params - Parameters including nodeId and octokit instance
    */
-  async convertPullToDraft(
-    shouldConvert: boolean,
-    params: {
-      nodeId: string;
-      octokit: InstanceType<typeof customOctokit>;
-    }
-  ): Promise<string> {
-    if (!shouldConvert) {
-      return `No action taken. The pull request will remain in its current state.`;
-    }
-
+  async convertPullToDraft(nodeId: string, octokit: Context["octokit"]) {
     const toDraft = `mutation {
-      convertPullRequestToDraft(input: {pullRequestId: "${params.nodeId}"}) {
+      convertPullRequestToDraft(input: {pullRequestId: "${nodeId}"}) {
         pullRequest {
           id
           number
@@ -153,10 +135,10 @@ export class PullReviewer {
     }`;
 
     try {
-      await params.octokit.graphql(toDraft);
-      return `Successfully converted pull request to draft mode.`;
-    } catch (err) {
-      return `Failed to convert pull request to draft mode: ${JSON.stringify(err)}`;
+      await octokit.graphql(toDraft);
+      logger.info(`Successfully converted pull request to draft mode.`);
+    } catch (e) {
+      throw logger.error("Failed to convert pull request to draft mode: ", { e });
     }
   }
 
@@ -174,12 +156,7 @@ export class PullReviewer {
     } = this.context;
 
     const taskNumber = await this.getTaskNumberFromPullRequest(this.context);
-    const issue = await fetchIssue({
-      context: this.context,
-      owner: this.context.payload.repository.owner.login,
-      repo: this.context.payload.repository.name,
-      issueNum: taskNumber,
-    });
+    const issue = await fetchIssue(this.context, taskNumber);
 
     if (!issue) {
       throw logger.error(`Error fetching issue, Aborting`, {
@@ -235,7 +212,7 @@ export class PullReviewer {
   }
 
   async checkIfPrClosesIssues(
-    octokit: InstanceType<typeof customOctokit>,
+    octokit: Context["octokit"],
     pr: {
       owner: string;
       repo: string;
@@ -299,14 +276,12 @@ export class PullReviewer {
 
     if (closingIssues.length === 0) {
       const linkedViaBodyHash = pull_request.body?.match(/#(\d+)/g);
-      const urlMatch = getOwnerRepoIssueNumberFromUrl(pull_request.body);
 
       if (linkedViaBodyHash?.length) {
         issueNumber = Number(linkedViaBodyHash[0].replace("#", ""));
-      }
-
-      if (urlMatch && !issueNumber) {
-        issueNumber = Number(urlMatch.issueNumber);
+      } else {
+        await this.convertPullToDraft(context.payload.pull_request.node_id, context.octokit);
+        throw context.logger.error("You need to link an issue and after that convert the PR to ready for review");
       }
     } else if (closingIssues.length > 1) {
       throw logger.error("Multiple tasks linked to this PR, needs investigated to see how best to handle it.", {
@@ -322,5 +297,27 @@ export class PullReviewer {
     }
 
     return issueNumber;
+  }
+  parsePullReviewData(input: string) {
+    try {
+      const parsedInput = parseLooseJson<{ confidenceThreshold: number; reviewComment: string }>(input);
+      console.error(parsedInput);
+      const { confidenceThreshold: rawThreshold, reviewComment: rawComment } = parsedInput;
+
+      if (typeof rawThreshold !== "number" && (typeof rawThreshold !== "string" || isNaN(Number(rawThreshold)))) {
+        throw logger.error("Invalid or missing confidenceThreshold", parsedInput);
+      }
+
+      if (typeof rawComment !== "string") {
+        throw logger.error("Invalid or missing reviewComment", parsedInput);
+      }
+
+      const confidenceThreshold = Number(rawThreshold);
+      const reviewComment = rawComment;
+
+      return { confidenceThreshold, reviewComment };
+    } catch (e) {
+      throw logger.error("Couldn't parse JSON output; Aborting", { e });
+    }
   }
 }

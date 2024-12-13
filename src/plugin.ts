@@ -1,7 +1,7 @@
-import { Context } from "./types";
+import Anthropic from "@anthropic-ai/sdk";
+import { Context } from "./types/context";
 import { createAdapters } from "./adapters";
 import { callCallbacks } from "./helpers/callback-proxy";
-import Anthropic from "@anthropic-ai/sdk";
 
 export async function plugin(context: Context) {
   const { env, config } = context;
