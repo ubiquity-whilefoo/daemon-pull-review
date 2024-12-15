@@ -1,4 +1,4 @@
-name: "@ubiquity-os-marketplace/daemon-pull-review"
+name: "Compute reviews"
 
 on:
   workflow_dispatch:
@@ -27,19 +27,14 @@ jobs:
     permissions: write-all
     environment: ${{ github.ref == 'refs/heads/main' && 'main' || 'development' }}
 
+    env:
+      KERNEL_PUBLIC_KEY: ${{ secrets.KERNEL_PUBLIC_KEY }}
+      PLUGIN_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      UBIQUITY_OS_APP_NAME: ${{ secrets.UBIQUITY_OS_APP_NAME }}
+
     steps:
-      - uses: actions/checkout@v4
-
-      - name: setup node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20.10.0"
-
-      - name: execute directive
-        run: node ./dist/index.js
-        id: daemon-pull-review
-        env:
-          KERNEL_PUBLIC_KEY: ${{ secrets.KERNEL_PUBLIC_KEY }}
-          PLUGIN_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          UBIQUITY_OS_APP_NAME: ${{ secrets.UBIQUITY_OS_APP_NAME }}
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run compute reviews
+        uses: ./
