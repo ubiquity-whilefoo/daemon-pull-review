@@ -7,7 +7,8 @@ export async function processPullRequestDiff(diff: string, tokenLimits: TokenLim
   const { runningTokenCount, tokensRemaining } = tokenLimits;
 
   // parse the diff into per-file diffs for quicker processing
-  const perFileDiffs = parsePerFileDiffs(diff);
+  const excludedFiles = ["bun.lockb"];
+  const perFileDiffs = parsePerFileDiffs(diff).filter((file) => !excludedFiles.includes(file.filename));
 
   // quick estimate using a simple heuristic; 3.5 characters per token
   const estimatedFileDiffStats = perFileDiffs.map(({ filename, diffContent }) => {
