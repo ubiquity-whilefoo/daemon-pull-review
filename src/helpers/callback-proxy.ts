@@ -1,7 +1,6 @@
 import { PullReviewer } from "../handlers/pull-reviewer";
 import { Context, SupportedEvents } from "../types";
 import { CallbackResult, ProxyCallbacks } from "../types/proxy";
-import { bubbleUpErrorComment } from "./errors";
 
 /**
  * The `callbacks` object defines an array of callback functions for each supported event type.
@@ -21,11 +20,7 @@ export async function callCallbacks(context: Context, eventName: SupportedEvents
     return { status: 204, reason: "skipped" };
   }
 
-  try {
-    return (await Promise.all(callbacks[eventName].map((callback) => handleCallback(callback, context))))[0];
-  } catch (er) {
-    return { status: 500, reason: (await bubbleUpErrorComment(context, er)).logMessage.raw };
-  }
+  return (await Promise.all(callbacks[eventName].map((callback) => handleCallback(callback, context))))[0];
 }
 
 /**

@@ -2,7 +2,7 @@ import { Context } from "../types/context";
 import { Issue } from "../types/github-types";
 
 export async function fetchIssue(context: Context, issueNum?: number): Promise<Issue | null> {
-  const { payload, logger, octokit } = context;
+  const { payload, octokit } = context;
 
   try {
     const response = await octokit.rest.issues.get({
@@ -12,7 +12,7 @@ export async function fetchIssue(context: Context, issueNum?: number): Promise<I
     });
     return response.data;
   } catch (error) {
-    logger.error(`Error fetching issue`, {
+    context.logger.error(`Error fetching issue`, {
       err: error,
       owner: payload.repository.owner.login,
       repo: payload.repository.name,

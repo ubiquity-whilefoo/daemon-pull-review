@@ -3,11 +3,10 @@ import { createAdapters } from "./adapters";
 import { SupportedEvents } from "./types/context";
 import { Env, envSchema } from "./types/env";
 import { PluginSettings, pluginSettingsSchema } from "./types/plugin-input";
-import { Command } from "./types/command";
 import { plugin } from "./plugin";
 import { LogLevel } from "@ubiquity-os/ubiquity-os-logger";
 
-createActionsPlugin<PluginSettings, Env, Command, SupportedEvents>(
+createActionsPlugin<PluginSettings, Env, null, SupportedEvents>(
   (context) => {
     return plugin({
       ...context,

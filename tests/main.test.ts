@@ -31,12 +31,6 @@ afterEach(() => {
 
 afterAll(() => server.close());
 
-jest.unstable_mockModule("../src/helpers/pull-helpers/fetch-diff", () => ({
-  fetchPullRequestDiff: jest.fn(() => ({
-    diff: "abc",
-  })),
-}));
-
 beforeAll(() => {
   server.listen();
 });

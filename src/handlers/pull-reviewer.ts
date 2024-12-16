@@ -1,8 +1,6 @@
-import { logger } from "../helpers/errors";
 import { formatSpecAndPull } from "../helpers/format-spec-and-pull";
 import { fetchIssue } from "../helpers/issue-fetching";
 import { CodeReviewStatus } from "../types/pull-requests";
-import { fetchRepoLanguageStats, fetchRepoDependencies } from "./ground-truths/fetch-deps";
 import { findGroundTruths } from "./ground-truths/find-ground-truths";
 import { Context } from "../types";
 import { CallbackResult } from "../types/proxy";
@@ -76,7 +74,7 @@ export class PullReviewer {
       });
       logger.info(`Code review submitted: ${response.data.html_url}`);
     } catch (er) {
-      throw logger.error("Failed to submit code review", { err: er });
+      throw this.context.logger.error("Failed to submit code review", { err: er });
     }
   }
 
@@ -90,13 +88,16 @@ export class PullReviewer {
     const { owner, name } = repository;
 
     logger.info(`${organization}/${repository}#${number} - ${action}`);
-    const timeline = await this.context.octokit.rest.issues.listEvents({
+
+    // Use octokit.paginate to automatically handle pagination
+    const timeline = await this.context.octokit.paginate(this.context.octokit.rest.issues.listEvents, {
       owner: owner.login,
       repo: name,
       issue_number: number,
+      per_page: 100, // Optional: customize items per page
     });
 
-    const reviews = timeline.data.filter((event) => event.event === "reviewed");
+    const reviews = timeline.filter((event) => event.event === "reviewed");
     const botReviews = reviews.filter((review) => review.actor.type === "Bot");
 
     if (!botReviews.length) {
@@ -110,7 +111,7 @@ export class PullReviewer {
     const diff = now.getTime() - lastReviewDate.getTime();
 
     if (diff < this._oneDay) {
-      throw logger.error("Only one review per day is allowed");
+      throw this.context.logger.error("Only one review per day is allowed");
     }
 
     logger.info("One review per day check passed");
@@ -136,9 +137,9 @@ export class PullReviewer {
 
     try {
       await octokit.graphql(toDraft);
-      logger.info(`Successfully converted pull request to draft mode.`);
+      this.context.logger.info(`Successfully converted pull request to draft mode.`);
     } catch (e) {
-      throw logger.error("Failed to convert pull request to draft mode: ", { e });
+      throw this.context.logger.error("Failed to convert pull request to draft mode: ", { e });
     }
   }
 
@@ -159,7 +160,7 @@ export class PullReviewer {
     const issue = await fetchIssue(this.context, taskNumber);
 
     if (!issue) {
-      throw logger.error(`Error fetching issue, Aborting`, {
+      throw this.context.logger.error(`Error fetching issue, Aborting`, {
         owner: this.context.payload.repository.owner.login,
         repo: this.context.payload.repository.name,
         issue_number: taskNumber,
@@ -168,21 +169,8 @@ export class PullReviewer {
 
     const taskSpecification = issue.body ?? "";
     const formattedSpecAndPull = await formatSpecAndPull(this.context, issue);
-    const [languages, { dependencies, devDependencies }] = await Promise.all([fetchRepoLanguageStats(this.context), fetchRepoDependencies(this.context)]);
 
-    let groundTruths = this._collectGroundTruths(languages, dependencies, devDependencies);
-
-    if (groundTruths.length === 3) {
-      return await completions.createCompletion(
-        anthropicAiModel,
-        formattedSpecAndPull,
-        groundTruths,
-        UBIQUITY_OS_APP_NAME,
-        completions.getModelMaxTokenLimit(anthropicAiModel)
-      );
-    }
-
-    groundTruths = await findGroundTruths(this.context, { taskSpecification });
+    const groundTruths = await findGroundTruths(this.context, { taskSpecification });
     return await completions.createCompletion(
       anthropicAiModel,
       formattedSpecAndPull,
@@ -190,25 +178,6 @@ export class PullReviewer {
       UBIQUITY_OS_APP_NAME,
       completions.getModelMaxTokenLimit(anthropicAiModel)
     );
-  }
-
-  /**
-   * Collect ground truths based on repository analysis
-   */
-  private _collectGroundTruths(languages: [string, number][], dependencies: Record<string, string>, devDependencies: Record<string, string>): string[] {
-    const groundTruths: string[] = [];
-
-    if (!languages.length) {
-      groundTruths.push("No languages found in the repository");
-    }
-    if (dependencies && !Reflect.ownKeys(dependencies).length) {
-      groundTruths.push("No dependencies found in the repository");
-    }
-    if (devDependencies && !Reflect.ownKeys(devDependencies).length) {
-      groundTruths.push("No devDependencies found in the repository");
-    }
-
-    return groundTruths;
   }
 
   async checkIfPrClosesIssues(
@@ -221,9 +190,6 @@ export class PullReviewer {
   ) {
     const { owner, repo, pr_number } = pr;
 
-    if (!pr_number) {
-      throw new Error("[checkIfPrClosesIssues]: pr_number is required");
-    }
     try {
       const result = await octokit.graphql<IssuesClosedByThisPr>(closedByPullRequestsReferences, {
         owner,
@@ -264,7 +230,6 @@ export class PullReviewer {
   async getTaskNumberFromPullRequest(context: Context<"pull_request.opened" | "pull_request.ready_for_review">) {
     const {
       payload: { pull_request },
-      logger,
     } = context;
     let issueNumber;
 
@@ -275,16 +240,16 @@ export class PullReviewer {
     });
 
     if (closingIssues.length === 0) {
-      const linkedViaBodyHash = pull_request.body?.match(/#(\d+)/g);
+      const linkedViaBodyHash = pull_request.body?.match(/[Rr]esolves\s+#(\d+)/);
 
       if (linkedViaBodyHash?.length) {
-        issueNumber = Number(linkedViaBodyHash[0].replace("#", ""));
+        issueNumber = Number(linkedViaBodyHash[1]);
       } else {
         await this.convertPullToDraft(context.payload.pull_request.node_id, context.octokit);
-        throw context.logger.error("You need to link an issue and after that convert the PR to ready for review");
+        throw this.context.logger.error("You need to link an issue and after that convert the PR to ready for review");
       }
     } else if (closingIssues.length > 1) {
-      throw logger.error("Multiple tasks linked to this PR, needs investigated to see how best to handle it.", {
+      throw this.context.logger.error("Multiple tasks linked to this PR, needs investigated to see how best to handle it.", {
         closingIssues,
         pull_request,
       });
@@ -293,7 +258,7 @@ export class PullReviewer {
     }
 
     if (!issueNumber) {
-      throw logger.error("Task number not found", { pull_request });
+      throw this.context.logger.error("Task number not found", { pull_request });
     }
 
     return issueNumber;
@@ -305,11 +270,11 @@ export class PullReviewer {
       const { confidenceThreshold: rawThreshold, reviewComment: rawComment } = parsedInput;
 
       if (typeof rawThreshold !== "number" && (typeof rawThreshold !== "string" || isNaN(Number(rawThreshold)))) {
-        throw logger.error("Invalid or missing confidenceThreshold", parsedInput);
+        throw this.context.logger.error("Invalid or missing confidenceThreshold", parsedInput);
       }
 
       if (typeof rawComment !== "string") {
-        throw logger.error("Invalid or missing reviewComment", parsedInput);
+        throw this.context.logger.error("Invalid or missing reviewComment", parsedInput);
       }
 
       const confidenceThreshold = Number(rawThreshold);
@@ -317,7 +282,7 @@ export class PullReviewer {
 
       return { confidenceThreshold, reviewComment };
     } catch (e) {
-      throw logger.error("Couldn't parse JSON output; Aborting", { e });
+      throw this.context.logger.error("Couldn't parse JSON output; Aborting", { e });
     }
   }
 }

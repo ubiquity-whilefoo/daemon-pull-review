@@ -105,16 +105,10 @@ export class AnthropicCompletion extends SuperAnthropic {
 
   async createGroundTruthCompletion(context: Context, groundTruthSource: string, systemMsg: string): Promise<string | null> {
     const {
-      env: { ANTHROPIC_API_KEY },
-      config: { anthropicAiBaseUrl, anthropicAiModel },
+      config: { anthropicAiModel },
     } = context;
 
-    const client = new Anthropic({
-      apiKey: ANTHROPIC_API_KEY,
-      baseURL: anthropicAiBaseUrl,
-    });
-
-    const res = await client.messages.create({
+    const res = await this.client.messages.create({
       model: anthropicAiModel,
       system: systemMsg,
       max_tokens: this.getModelMaxTokenLimit(anthropicAiModel),
