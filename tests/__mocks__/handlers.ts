@@ -13,6 +13,8 @@ export const handlers = [
     )
   ),
 
+  http.post("https://api.github.com/graphql", () => HttpResponse.json({})),
+
   // get repo
   http.get("https://api.github.com/repos/:owner/:repo", ({ params: { owner, repo } }: { params: { owner: string; repo: string } }) => {
     const item = db.repo.findFirst({ where: { name: { equals: repo }, owner: { login: { equals: owner } } } });
