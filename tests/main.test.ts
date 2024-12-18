@@ -16,21 +16,8 @@ import { LogReturn } from "@ubiquity-os/ubiquity-os-logger";
 const MOCK_ANSWER_PASSED = "{confidenceThreshold: 1, reviewComment: 'passed'}";
 
 jest.unstable_mockModule("../src/helpers/pull-helpers/fetch-diff", () => ({
-  fetchPullRequestDiff: jest.fn(() => ({
-    diff: "abc",
-  })),
+  fetchPullRequestDiff: jest.fn(() => ({ diff: "abc" })),
 }));
-
-beforeAll(() => {
-  server.listen();
-});
-
-afterEach(() => {
-  drop(db);
-  server.resetHandlers();
-});
-
-afterAll(() => server.close());
 
 beforeAll(() => {
   server.listen();
@@ -90,13 +77,9 @@ describe("Pull Reviewer tests", () => {
       const context = createContext();
       const pullReviewer = new PullReviewer(context);
 
-      jest.spyOn(pullReviewer.context.octokit, "paginate").mockResolvedValue([
-        {
-          event: "reviewed",
-          actor: { type: "Bot" },
-          created_at: new Date().toISOString(),
-        },
-      ]);
+      jest
+        .spyOn(pullReviewer.context.octokit, "paginate")
+        .mockResolvedValue([{ event: "reviewed", actor: { type: "Bot" }, created_at: new Date().toISOString() }]);
       try {
         await pullReviewer.canPerformReview();
       } catch (error) {
@@ -110,17 +93,13 @@ describe("Pull Reviewer tests", () => {
       const context = createContext();
       const pullReviewer = new PullReviewer(context);
 
-      // Mock the timeline events to include an old bot review
+      // Mock an old bot review
       const oldDate = new Date();
       oldDate.setHours(oldDate.getHours() - 25);
 
-      jest.spyOn(pullReviewer.context.octokit, "paginate").mockResolvedValue([
-        {
-          event: "reviewed",
-          actor: { type: "Bot" },
-          created_at: oldDate.toISOString(),
-        },
-      ]);
+      jest
+        .spyOn(pullReviewer.context.octokit, "paginate")
+        .mockResolvedValue([{ event: "reviewed", actor: { type: "Bot" }, created_at: oldDate.toISOString() }]);
 
       expect(await pullReviewer.canPerformReview()).toBe(true);
     });
@@ -152,13 +131,14 @@ describe("Pull Reviewer tests", () => {
         expect(e.logMessage.raw).toBe("Couldn't parse JSON output; Aborting");
       }
     });
+
     it("should accept string confidence threshold and convert to number", async () => {
       const { PullReviewer } = await import("../src/handlers/pull-reviewer");
       const pullReviewer = new PullReviewer(createContext());
 
       const input = '{"confidenceThreshold": "0.8", "reviewComment": "test"}';
-
       const result = pullReviewer.parsePullReviewData(input);
+
       expect(result).toEqual({
         confidenceThreshold: 0.8,
         reviewComment: "test",
@@ -171,9 +151,9 @@ describe("Pull Reviewer tests", () => {
     const context = createContext();
     const pullReviewer = new PullReviewer(context);
 
-    context.octokit.rest.pulls.createReview = jest
-      .fn()
-      .mockReturnValue({ data: { html_url: "abc" } }) as unknown as typeof context.octokit.rest.pulls.createReview;
+    context.octokit.rest.pulls.createReview = jest.fn().mockReturnValue({
+      data: { html_url: "abc" },
+    }) as unknown as typeof context.octokit.rest.pulls.createReview;
 
     await pullReviewer.submitCodeReview("Great job!", "COMMENT");
 
