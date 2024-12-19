@@ -1,9 +1,8 @@
 import { encode } from "gpt-tokenizer";
 import { TokenLimits } from "../../types/llm";
 import { EncodeOptions } from "gpt-tokenizer/esm/GptEncoding";
-import { Logs } from "@ubiquity-os/ubiquity-os-logger";
 
-export async function processPullRequestDiff(diff: string, tokenLimits: TokenLimits, logger: Logs) {
+export async function processPullRequestDiff(diff: string, tokenLimits: TokenLimits, logger: Context["logger"]) {
   const { runningTokenCount, tokensRemaining } = tokenLimits;
 
   // parse the diff into per-file diffs for quicker processing

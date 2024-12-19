@@ -1,4 +1,4 @@
-import { Logs } from "@ubiquity-os/ubiquity-os-logger";
+import { Context } from "../types/context";
 
 /**
  * Create a unique key for an issue based on its URL and optional issue number
@@ -6,7 +6,7 @@ import { Logs } from "@ubiquity-os/ubiquity-os-logger";
  * @param issue - The optional issue number
  * @returns The unique key for the issue
  */
-export function createKey(issueUrl: string, logger: Logs, issue?: number) {
+export function createKey(issueUrl: string, logger: Context["logger"], issue?: number) {
   const urlParts = issueUrl.split("/");
 
   let key;

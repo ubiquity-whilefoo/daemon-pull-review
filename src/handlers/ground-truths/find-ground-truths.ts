@@ -2,7 +2,6 @@ import { Context } from "../../types";
 import { CodeReviewAppParams, CodeReviewGroundTruthSystemMessage } from "../../types/llm";
 import { CODE_REVIEW_GROUND_TRUTHS_SYSTEM_MESSAGE } from "./prompts";
 import { createGroundTruthSysMsg } from "./create-system-message";
-import { Logs } from "@ubiquity-os/ubiquity-os-logger";
 
 export async function findGroundTruths(context: Context, params: CodeReviewAppParams): Promise<string[]> {
   const systemMsgObj = CODE_REVIEW_GROUND_TRUTHS_SYSTEM_MESSAGE;
@@ -22,7 +21,7 @@ async function findCodeReviewTruths(context: Context, params: CodeReviewAppParam
   return validateGroundTruths(truths, context.logger);
 }
 
-function validateGroundTruths(truthsString: string | null, logger: Logs): string[] {
+function validateGroundTruths(truthsString: string | null, logger: Context["logger"]): string[] {
   let truths;
   if (!truthsString) {
     throw logger.error("Failed to generate ground truths");
