@@ -30,6 +30,8 @@ export class PullReviewer {
       return { status: 200, reason: logger.info("PR is closed, no action required").logMessage.raw };
     } else if (!(await this.canPerformReview())) {
       return { status: 200, reason: logger.info("Cannot perform review at this time").logMessage.raw };
+    } else if (pull_request.user.id !== this.context.payload.sender.id) {
+      return { status: 200, reason: logger.info("Review was'nt requested by pull author").logMessage.raw };
     }
 
     return await this._handleCodeReview();
