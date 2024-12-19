@@ -86,10 +86,10 @@ export class PullReviewer {
    */
   async canPerformReview(): Promise<boolean> {
     const { logger, payload } = this.context;
-    const { number, organization, repository, action } = payload;
+    const { number, repository, action } = payload;
     const { owner, name } = repository;
 
-    logger.info(`${organization}/${repository}#${number} - ${action}`);
+    logger.info(`${repository.owner.login}/${repository.name}#${number} - ${action}`);
 
     // Use octokit.paginate to automatically handle pagination
     const timeline = await this.context.octokit.paginate(this.context.octokit.rest.issues.listEvents, {

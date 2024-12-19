@@ -19,8 +19,8 @@ plugins:
   - uses:
       - plugin: http://localhost:4000
         with:
-          anthropicAiModel: ""
-          anthropicAiBaseUrl: ""
+          anthropicAiModel: "" # Optional - defaults to latest Claude model
+          anthropicAiBaseUrl: "" # Optional - defaults to Anthropic's API endpoint
 ```
 
 `.dev.vars` (for local testing):
