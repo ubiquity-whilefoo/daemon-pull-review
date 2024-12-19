@@ -1,11 +1,12 @@
-import { logger } from "../helpers/errors";
+import { Logs } from "@ubiquity-os/ubiquity-os-logger";
+
 /**
  * Create a unique key for an issue based on its URL and optional issue number
  * @param issueUrl - The URL of the issue
  * @param issue - The optional issue number
  * @returns The unique key for the issue
  */
-export function createKey(issueUrl: string, issue?: number) {
+export function createKey(issueUrl: string, logger: Logs, issue?: number) {
   const urlParts = issueUrl.split("/");
 
   let key;

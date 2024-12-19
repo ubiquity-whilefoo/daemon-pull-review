@@ -240,14 +240,8 @@ export class PullReviewer {
     });
 
     if (closingIssues.length === 0) {
-      const linkedViaBodyHash = pull_request.body?.match(/[Rr]esolves\s+#(\d+)/);
-
-      if (linkedViaBodyHash?.length) {
-        issueNumber = Number(linkedViaBodyHash[1]);
-      } else {
-        await this.convertPullToDraft(context.payload.pull_request.node_id, context.octokit);
-        throw this.context.logger.error("You need to link an issue and after that convert the PR to ready for review");
-      }
+      await this.convertPullToDraft(context.payload.pull_request.node_id, context.octokit);
+      throw this.context.logger.error("You need to link an issue and after that convert the PR to ready for review");
     } else if (closingIssues.length > 1) {
       throw this.context.logger.error("Multiple tasks linked to this PR, needs investigated to see how best to handle it.", {
         closingIssues,
@@ -263,26 +257,25 @@ export class PullReviewer {
 
     return issueNumber;
   }
+
   parsePullReviewData(input: string) {
-    try {
-      const parsedInput = parseLooseJson<{ confidenceThreshold: number; reviewComment: string }>(input);
-
-      const { confidenceThreshold: rawThreshold, reviewComment: rawComment } = parsedInput;
-
-      if (typeof rawThreshold !== "number" && (typeof rawThreshold !== "string" || isNaN(Number(rawThreshold)))) {
-        throw this.context.logger.error("Invalid or missing confidenceThreshold", parsedInput);
-      }
-
-      if (typeof rawComment !== "string") {
-        throw this.context.logger.error("Invalid or missing reviewComment", parsedInput);
-      }
-
-      const confidenceThreshold = Number(rawThreshold);
-      const reviewComment = rawComment;
-
-      return { confidenceThreshold, reviewComment };
-    } catch (e) {
-      throw this.context.logger.error("Couldn't parse JSON output; Aborting", { e });
+    const parsedInput = parseLooseJson<{ confidenceThreshold: number; reviewComment: string }>(input);
+    if (parsedInput === null) {
+      throw this.context.logger.error("Couldn't parse JSON output; Aborting");
     }
+    const { confidenceThreshold: rawThreshold, reviewComment: rawComment } = parsedInput;
+
+    if (typeof rawThreshold !== "number" && (typeof rawThreshold !== "string" || isNaN(Number(rawThreshold)))) {
+      throw this.context.logger.error("Invalid or missing confidenceThreshold", parsedInput);
+    }
+
+    if (typeof rawComment !== "string") {
+      throw this.context.logger.error("Invalid or missing reviewComment", parsedInput);
+    }
+
+    const confidenceThreshold = Number(rawThreshold);
+    const reviewComment = rawComment;
+
+    return { confidenceThreshold, reviewComment };
   }
 }

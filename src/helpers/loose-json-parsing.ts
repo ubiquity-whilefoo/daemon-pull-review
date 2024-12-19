@@ -1,6 +1,4 @@
-import { logger } from "./errors";
-
-export function parseLooseJson<T extends object>(input: string): T {
+export function parseLooseJson<T extends object>(input: string): T | null {
   try {
     const fixedInput = input
       // Replace single quotes with double quotes, but not within words
@@ -21,7 +19,7 @@ export function parseLooseJson<T extends object>(input: string): T {
       });
 
     return JSON.parse(fixedInput);
-  } catch (e) {
-    throw logger.error(`Failed to parse input: `, { e });
+  } catch {
+    return null;
   }
 }

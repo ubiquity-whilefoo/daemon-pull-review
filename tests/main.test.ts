@@ -1,16 +1,15 @@
 import { db } from "./__mocks__/db";
 import { server } from "./__mocks__/node";
 import usersGet from "./__mocks__/users-get.json";
-import { describe, beforeAll, beforeEach, afterAll, afterEach, it, jest } from "@jest/globals";
+import { describe, beforeAll, beforeEach, afterAll, afterEach, it, jest, expect } from "@jest/globals";
 import { Context, SupportedEvents } from "../src/types";
 import { drop } from "@mswjs/data";
 import issueTemplate from "./__mocks__/issue-template";
 import repoTemplate from "./__mocks__/repo-template";
-import { logger } from "../src/helpers/errors";
 import { Octokit } from "@octokit/rest";
 import { CompletionsType } from "../src/adapters/claude/helpers/completions";
 import pullTemplate from "./__mocks__/pull-template";
-import { LogReturn } from "@ubiquity-os/ubiquity-os-logger";
+import { Logs } from "@ubiquity-os/ubiquity-os-logger";
 
 // Mock constants
 const MOCK_ANSWER_PASSED = "{confidenceThreshold: 1, reviewComment: 'passed'}";
@@ -80,12 +79,12 @@ describe("Pull Reviewer tests", () => {
       jest
         .spyOn(pullReviewer.context.octokit, "paginate")
         .mockResolvedValue([{ event: "reviewed", actor: { type: "Bot" }, created_at: new Date().toISOString() }]);
-      try {
-        await pullReviewer.canPerformReview();
-      } catch (error) {
-        const e = error as LogReturn;
-        expect(e.logMessage.raw).toBe("Only one review per day is allowed");
-      }
+
+      await expect(pullReviewer.canPerformReview()).rejects.toMatchObject({
+        logMessage: {
+          raw: "Only one review per day is allowed",
+        },
+      });
     });
 
     it("should allow review after 24 hours have passed", async () => {
@@ -111,12 +110,16 @@ describe("Pull Reviewer tests", () => {
       const pullReviewer = new PullReviewer(createContext());
 
       const invalidInput = '{"confidenceThreshold": "invalid", "reviewComment": "test"}';
-      try {
+
+      expect(() => {
         pullReviewer.parsePullReviewData(invalidInput);
-      } catch (error) {
-        const e = error as LogReturn;
-        expect(e.logMessage.raw).toBe("Couldn't parse JSON output; Aborting");
-      }
+      }).toThrow(
+        expect.objectContaining({
+          logMessage: expect.objectContaining({
+            raw: "Invalid or missing confidenceThreshold",
+          }),
+        })
+      );
     });
 
     it("should throw error for missing review comment", async () => {
@@ -124,12 +127,16 @@ describe("Pull Reviewer tests", () => {
       const pullReviewer = new PullReviewer(createContext());
 
       const invalidInput = '{"confidenceThreshold": 0.8}';
-      try {
+
+      expect(() => {
         pullReviewer.parsePullReviewData(invalidInput);
-      } catch (error) {
-        const e = error as LogReturn;
-        expect(e.logMessage.raw).toBe("Couldn't parse JSON output; Aborting");
-      }
+      }).toThrow(
+        expect.objectContaining({
+          logMessage: expect.objectContaining({
+            raw: "Invalid or missing reviewComment",
+          }),
+        })
+      );
     });
 
     it("should accept string confidence threshold and convert to number", async () => {
@@ -188,9 +195,6 @@ describe("Pull Reviewer tests", () => {
       issues: [],
     });
 
-    // Remove issue reference from PR body
-    context.payload.pull_request.body = "Some description without issue reference";
-
     await expect(pullReviewer.getTaskNumberFromPullRequest(context)).rejects.toMatchObject({
       logMessage: {
         diff: "```diff\n! You need to link an issue and after that convert the PR to ready for review\n```",
@@ -220,6 +224,7 @@ async function setupTests() {
 }
 
 function createContext() {
+  const logger = new Logs("debug");
   const user = db.users.findFirst({ where: { id: { equals: 1 } } });
   return {
     payload: {

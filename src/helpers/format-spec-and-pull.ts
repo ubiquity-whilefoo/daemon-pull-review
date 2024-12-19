@@ -32,7 +32,7 @@ async function createPullSpecContextBlockSection({
   tokenLimits: TokenLimits;
   issue: Issue;
 }): Promise<string> {
-  const key = createKey(issue.html_url);
+  const key = createKey(issue.html_url, context.logger);
   const [org, repo, issueNum] = key.split("/");
 
   const issueNumber = parseInt(issueNum);
