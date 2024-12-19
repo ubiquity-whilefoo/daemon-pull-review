@@ -1,6 +1,7 @@
 import { encode } from "gpt-tokenizer";
 import { TokenLimits } from "../../types/llm";
 import { EncodeOptions } from "gpt-tokenizer/esm/GptEncoding";
+import { Context } from "../../types";
 
 export async function processPullRequestDiff(diff: string, tokenLimits: TokenLimits, logger: Context["logger"]) {
   const { runningTokenCount, tokensRemaining } = tokenLimits;
