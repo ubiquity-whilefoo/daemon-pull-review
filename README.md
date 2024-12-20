@@ -17,7 +17,7 @@ With its huge context window, we are able to feed the entire issue specification
 ```yml
 plugins:
   - uses:
-      - plugin: http://localhost:4005
+      - plugin: http://localhost:4000
         with:
           anthropicAiModel: "" # Optional - defaults to latest Claude model
           anthropicAiBaseUrl: "" # Optional - defaults to Anthropic's API endpoint
