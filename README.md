@@ -17,7 +17,7 @@ With its huge context window, we are able to feed the entire issue specification
 ```yml
 plugins:
   - uses:
-      - plugin: http://localhost:4000
+      - plugin: http://localhost:4005
         with:
           anthropicAiModel: "" # Optional - defaults to latest Claude model
           anthropicAiBaseUrl: "" # Optional - defaults to Anthropic's API endpoint
@@ -30,6 +30,14 @@ specify the AnthropicAiBase URL in the `ubiquibot-config.yml` file and set the `
 ```sh
 ANTHROPIC_API_KEY=your_anthropic_api_key
 UBIQUITY_OS_APP_NAME="UbiquityOS"
+```
+
+## Custom Port Configuration
+
+If you specify a different port in your config file instead of the default port 4005, you'll need to start the development server with the corresponding port number:
+
+```sh
+bun wrangler dev --env dev --port <your-port-number>
 ```
 
 ## Testing
