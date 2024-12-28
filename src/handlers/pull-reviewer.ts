@@ -1,6 +1,6 @@
 import { formatSpecAndPull } from "../helpers/format-spec-and-pull";
 import { fetchIssue } from "../helpers/issue-fetching";
-import { CodeReviewStatus } from "../types/pull-requests";
+import { CodeReviewStatus } from "../types/github-types";
 import { findGroundTruths } from "./ground-truths/find-ground-truths";
 import { Context } from "../types";
 import { CallbackResult } from "../types/proxy";
@@ -31,7 +31,7 @@ export class PullReviewer {
     } else if (!(await this.canPerformReview())) {
       return { status: 200, reason: logger.info("Cannot perform review at this time").logMessage.raw };
     } else if (pull_request.user.id !== this.context.payload.sender.id) {
-      return { status: 200, reason: logger.info("Review was'nt requested by pull author").logMessage.raw };
+      return { status: 200, reason: logger.info("Review wasn't requested by pull author").logMessage.raw };
     }
 
     return await this._handleCodeReview();
@@ -126,7 +126,7 @@ export class PullReviewer {
    * @param params - Parameters including nodeId and octokit instance
    */
   async convertPullToDraft(nodeId: string, octokit: Context["octokit"]) {
-    const toDraft = `mutation {
+    const toDraft = /* GraphQL */ `mutation {
       convertPullRequestToDraft(input: {pullRequestId: "${nodeId}"}) {
         pullRequest {
           id
