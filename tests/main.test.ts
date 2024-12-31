@@ -12,7 +12,7 @@ import pullTemplate from "./__mocks__/pull-template";
 import { Logs } from "@ubiquity-os/ubiquity-os-logger";
 
 // Mock constants
-const MOCK_ANSWER_PASSED = "{confidenceThreshold: 1, reviewComment: 'passed'}";
+const MOCK_ANSWER_PASSED = `{"confidenceThreshold": 1, "reviewComment": "passed"}`;
 
 jest.unstable_mockModule("../src/helpers/pull-helpers/fetch-diff", () => ({
   fetchPullRequestDiff: jest.fn(() => ({ diff: "abc" })),
@@ -112,11 +112,11 @@ describe("Pull Reviewer tests", () => {
       const invalidInput = '{"confidenceThreshold": "invalid", "reviewComment": "test"}';
 
       expect(() => {
-        pullReviewer.parsePullReviewData(invalidInput);
+        pullReviewer.validateReviewOutput(invalidInput);
       }).toThrow(
         expect.objectContaining({
           logMessage: expect.objectContaining({
-            raw: "Invalid or missing confidenceThreshold",
+            raw: "LLM failed to output a confidence threshold successfully",
           }),
         })
       );
@@ -129,11 +129,11 @@ describe("Pull Reviewer tests", () => {
       const invalidInput = '{"confidenceThreshold": 0.8}';
 
       expect(() => {
-        pullReviewer.parsePullReviewData(invalidInput);
+        pullReviewer.validateReviewOutput(invalidInput);
       }).toThrow(
         expect.objectContaining({
           logMessage: expect.objectContaining({
-            raw: "Invalid or missing reviewComment",
+            raw: "LLM failed to output review comment successfully",
           }),
         })
       );
@@ -144,7 +144,7 @@ describe("Pull Reviewer tests", () => {
       const pullReviewer = new PullReviewer(createContext());
 
       const input = '{"confidenceThreshold": "0.8", "reviewComment": "test"}';
-      const result = pullReviewer.parsePullReviewData(input);
+      const result = pullReviewer.validateReviewOutput(input);
 
       expect(result).toEqual({
         confidenceThreshold: 0.8,
@@ -177,7 +177,7 @@ describe("Pull Reviewer tests", () => {
     const { PullReviewer } = await import("../src/handlers/pull-reviewer");
     const pullReviewer = new PullReviewer(createContext());
 
-    const result = pullReviewer.parsePullReviewData(MOCK_ANSWER_PASSED);
+    const result = pullReviewer.validateReviewOutput(MOCK_ANSWER_PASSED);
     expect(result).toEqual({
       confidenceThreshold: 1,
       reviewComment: "passed",
@@ -197,9 +197,9 @@ describe("Pull Reviewer tests", () => {
 
     await expect(pullReviewer.getTaskNumberFromPullRequest(context)).rejects.toMatchObject({
       logMessage: {
-        diff: "```diff\n! You need to link an issue and after that convert the PR to ready for review\n```",
+        diff: "```diff\n! You need to link an issue before converting the PR to ready for review.\n```",
         level: "error",
-        raw: "You need to link an issue and after that convert the PR to ready for review",
+        raw: "You need to link an issue before converting the PR to ready for review.",
         type: "error",
       },
       metadata: {
