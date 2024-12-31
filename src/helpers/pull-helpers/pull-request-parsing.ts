@@ -2,33 +2,37 @@ import { encode } from "gpt-tokenizer";
 import { TokenLimits } from "../../types/llm";
 import { EncodeOptions } from "gpt-tokenizer/esm/GptEncoding";
 import { Context } from "../../types";
+import { getExcludedFiles } from "../excluded-files";
 
 export async function processPullRequestDiff(diff: string, tokenLimits: TokenLimits, logger: Context["logger"]) {
   const { runningTokenCount, tokensRemaining } = tokenLimits;
 
   // parse the diff into per-file diffs for quicker processing
-  const excludedFiles = ["bun.lockb"];
-  const perFileDiffs = parsePerFileDiffs(diff).filter((file) => !excludedFiles.includes(file.filename));
+  const excludedFiles = await getExcludedFiles();
+  const perFileDiffs = parsePerFileDiffs(diff).filter((file) => excludedFiles.some((excludedFile) => !file.filename.startsWith(excludedFile)));
 
-  // quick estimate using a simple heuristic; 3.5 characters per token
-  const estimatedFileDiffStats = perFileDiffs.map(({ filename, diffContent }) => {
-    const estimatedTokenCount = Math.ceil(diffContent.length / 3.5);
-    return { filename, estimatedTokenCount, diffContent };
-  });
+  const accurateFileDiffStats = await Promise.all(
+    perFileDiffs.map(async (file) => {
+      const tokenCountArray = await encodeAsync(file.diffContent, { disallowedSpecial: new Set() });
+      const tokenCount = tokenCountArray.length;
+      return { filename: file.filename, tokenCount, diffContent: file.diffContent };
+    })
+  );
 
-  estimatedFileDiffStats.sort((a, b) => a.estimatedTokenCount - b.estimatedTokenCount); // Smallest first
+  // Sort by token count to process smallest files first
+  accurateFileDiffStats.sort((a, b) => a.tokenCount - b.tokenCount);
 
   let currentTokenCount = runningTokenCount;
   const includedFileDiffs = [];
 
-  // Using the quick estimate, include as many files as possible without exceeding token limits
-  for (const file of estimatedFileDiffStats) {
-    if (currentTokenCount + file.estimatedTokenCount > tokensRemaining) {
+  // Include files until we reach the token limit
+  for (const file of accurateFileDiffStats) {
+    if (currentTokenCount + file.tokenCount > tokensRemaining) {
       logger.info(`Skipping ${file.filename} to stay within token limits.`);
       continue;
     }
     includedFileDiffs.push(file);
-    currentTokenCount += file.estimatedTokenCount;
+    currentTokenCount += file.tokenCount;
   }
 
   // If no files can be included, return null
@@ -37,38 +41,29 @@ export async function processPullRequestDiff(diff: string, tokenLimits: TokenLim
     return { diff: null };
   }
 
-  // Accurately calculate token count for included files we have approximated to be under the limit
-  const accurateFileDiffStats = await Promise.all(
-    includedFileDiffs.map(async (file) => {
-      const tokenCountArray = await encodeAsync(file.diffContent, { disallowedSpecial: new Set() });
-      const tokenCount = tokenCountArray.length;
-      return { ...file, tokenCount };
-    })
-  );
-
-  // Take an accurate reading of our current collection of files within the diff
-  currentTokenCount = accurateFileDiffStats.reduce((sum, file) => sum + file.tokenCount, runningTokenCount);
+  // Recalculate the current token count after including the files
+  currentTokenCount = includedFileDiffs.reduce((sum, file) => sum + file.tokenCount, runningTokenCount);
 
   // Remove files from the end of the list until we are within token limits
-  while (currentTokenCount > tokensRemaining && accurateFileDiffStats.length > 0) {
-    const removedFile = accurateFileDiffStats.pop();
+  while (currentTokenCount > tokensRemaining && includedFileDiffs.length > 0) {
+    const removedFile = includedFileDiffs.pop();
     currentTokenCount -= removedFile?.tokenCount || 0;
     logger.info(`Excluded ${removedFile?.filename || "Unknown filename"} after accurate token count exceeded limits.`);
   }
 
-  if (accurateFileDiffStats.length === 0) {
+  if (includedFileDiffs.length === 0) {
     logger.error(`Cannot include any files from diff after accurate token count calculation.`);
     return { diff: null };
   }
 
   // Build the diff with the included files
-  const currentDiff = accurateFileDiffStats.map((file) => file.diffContent).join("\n");
+  const currentDiff = includedFileDiffs.map((file) => file.diffContent).join("\n");
 
   return { diff: currentDiff };
 }
 
 // Helper to speed up tokenization
-export async function encodeAsync(text: string, options: EncodeOptions): Promise<number[]> {
+async function encodeAsync(text: string, options: EncodeOptions): Promise<number[]> {
   return new Promise((resolve) => {
     const result = encode(text, options);
     resolve(result);
@@ -76,7 +71,7 @@ export async function encodeAsync(text: string, options: EncodeOptions): Promise
 }
 
 // Helper to parse a diff into per-file diffs
-export function parsePerFileDiffs(diff: string): { filename: string; diffContent: string }[] {
+function parsePerFileDiffs(diff: string): { filename: string; diffContent: string }[] {
   // regex to capture diff sections, including the last file
   const diffPattern = /^diff --git a\/(.*?) b\/.*$/gm;
   let match: RegExpExecArray | null;

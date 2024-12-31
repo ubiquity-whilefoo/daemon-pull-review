@@ -14,30 +14,11 @@ const callbacks = {
   "pull_request.ready_for_review": [(context: Context) => new PullReviewer(context).performPullPrecheck()],
 } as ProxyCallbacks;
 
-export async function callCallbacks(context: Context, eventName: SupportedEvents): Promise<CallbackResult> {
+export async function callCallbacks<T extends SupportedEvents>(context: Context<T>, eventName: T): Promise<CallbackResult> {
   if (!callbacks[eventName]) {
     context.logger.info(`No callbacks found for event ${eventName}`);
     return { status: 204, reason: "skipped" };
   }
 
-  return (await Promise.all(callbacks[eventName].map((callback) => handleCallback(callback, context))))[0];
-}
-
-/**
- * Why do we need this wrapper function?
- *
- * By using a generic `Function` type for the callback parameter, we bypass strict type
- * checking temporarily. This allows us to pass a standard `Context` object, which we know
- * contains the correct event and payload types, to the callback safely.
- *
- * We can trust that the `ProxyCallbacks` type has already ensured that each callback function
- * matches the expected event and payload types, so this function provides a safe and
- * flexible way to handle callbacks without introducing type or logic errors.
- *
- * In this updated version, the callbacks are arrow functions that instantiate the PullReviewer
- * class and call its methods, rather than standalone functions.
- */
-// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-export function handleCallback(callback: Function, context: Context) {
-  return callback(context);
+  return (await Promise.all(callbacks[eventName].map((callback) => callback(context))))[0];
 }

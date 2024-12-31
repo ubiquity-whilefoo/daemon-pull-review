@@ -1,6 +1,6 @@
 # `@ubiquity-os/daemon-pull-review`
 
-This is a high context aware GitHub organization integrated bot that uses the Anthopic Claude 3.5 Sonnet model to provide automated reviews and feeback to Github pull requests.
+This is a high context aware GitHub organization integrated bot that uses the Anthropic Claude 3.5 Sonnet model to provide automated reviews and feeback to Github pull requests.
 
 ## Usage
 
@@ -12,7 +12,7 @@ With its huge context window, we are able to feed the entire issue specification
 
 ## Installation
 
-`ubiquibot-config.yml`:
+`.ubiquity-os.config.yml`:
 
 ```yml
 plugins:
@@ -25,7 +25,7 @@ plugins:
 
 `.dev.vars` (for local testing):
 
-specify the AnthropicAiBase URL in the `ubiquibot-config.yml` file and set the `ANTHROPIC_API_KEY` in the `.dev.vars` file.
+specify the AnthropicAiBase URL in the `.ubiquity-os.config.yml` file and set the `ANTHROPIC_API_KEY` in the `.dev.vars` file.
 
 ```sh
 ANTHROPIC_API_KEY=your_anthropic_api_key

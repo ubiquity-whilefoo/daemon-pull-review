@@ -4,7 +4,6 @@ import { CodeReviewStatus } from "../types/github-types";
 import { findGroundTruths } from "./ground-truths/find-ground-truths";
 import { Context } from "../types";
 import { CallbackResult } from "../types/proxy";
-import { parseLooseJson } from "../helpers/loose-json-parsing";
 import { closedByPullRequestsReferences, IssuesClosedByThisPr } from "../helpers/gql-queries";
 
 export class PullReviewer {
@@ -42,12 +41,11 @@ export class PullReviewer {
    * @returns CallbackResult indicating the status and reason
    */
   private async _handleCodeReview(): Promise<CallbackResult> {
-    const { payload } = this.context;
     const pullReviewData = await this.reviewPull();
-    const { reviewComment, confidenceThreshold } = this.parsePullReviewData(pullReviewData.answer);
+    const { reviewComment, confidenceThreshold } = this.validateReviewOutput(pullReviewData.answer);
 
     if (confidenceThreshold < 0.5) {
-      await this.convertPullToDraft(payload.pull_request.node_id, this.context.octokit);
+      await this.convertPullToDraft();
     }
 
     await this.submitCodeReview(reviewComment, confidenceThreshold > 0.5 ? "COMMENT" : "REQUEST_CHANGES");
@@ -113,6 +111,7 @@ export class PullReviewer {
     const diff = now.getTime() - lastReviewDate.getTime();
 
     if (diff < this._oneDay) {
+      await this.convertPullToDraft();
       throw this.context.logger.error("Only one review per day is allowed");
     }
 
@@ -125,9 +124,9 @@ export class PullReviewer {
    * @param shouldConvert - Whether to convert the PR to draft
    * @param params - Parameters including nodeId and octokit instance
    */
-  async convertPullToDraft(nodeId: string, octokit: Context["octokit"]) {
+  async convertPullToDraft() {
     const toDraft = /* GraphQL */ `mutation {
-      convertPullRequestToDraft(input: {pullRequestId: "${nodeId}"}) {
+      convertPullRequestToDraft(input: {pullRequestId: "${this.context.payload.pull_request.node_id}"}) {
         pullRequest {
           id
           number
@@ -138,7 +137,7 @@ export class PullReviewer {
     }`;
 
     try {
-      await octokit.graphql(toDraft);
+      await this.context.octokit.graphql(toDraft);
       this.context.logger.info(`Successfully converted pull request to draft mode.`);
     } catch (e) {
       throw this.context.logger.error("Failed to convert pull request to draft mode: ", { e });
@@ -169,7 +168,9 @@ export class PullReviewer {
       });
     }
 
-    const taskSpecification = issue.body ?? "";
+    const taskSpecification = issue.body;
+    if (!taskSpecification) throw this.context.logger.error("This task does not contain a specification and this cannot be automatically reviewed");
+
     const formattedSpecAndPull = await formatSpecAndPull(this.context, issue);
 
     const groundTruths = await findGroundTruths(this.context, { taskSpecification });
@@ -242,10 +243,10 @@ export class PullReviewer {
     });
 
     if (closingIssues.length === 0) {
-      await this.convertPullToDraft(context.payload.pull_request.node_id, context.octokit);
-      throw this.context.logger.error("You need to link an issue and after that convert the PR to ready for review");
+      await this.convertPullToDraft();
+      throw this.context.logger.error("You need to link an issue before converting the PR to ready for review.");
     } else if (closingIssues.length > 1) {
-      throw this.context.logger.error("Multiple tasks linked to this PR, needs investigated to see how best to handle it.", {
+      throw this.context.logger.error("Multiple tasks are linked to this PR. This needs to be investigated to determine the best way to handle it.", {
         closingIssues,
         pull_request,
       });
@@ -260,24 +261,21 @@ export class PullReviewer {
     return issueNumber;
   }
 
-  parsePullReviewData(input: string) {
-    const parsedInput = parseLooseJson<{ confidenceThreshold: number; reviewComment: string }>(input);
-    if (parsedInput === null) {
-      throw this.context.logger.error("Couldn't parse JSON output; Aborting");
+  validateReviewOutput(reviewString: string) {
+    let reviewOutput: { confidenceThreshold: number; reviewComment: string };
+    try {
+      reviewOutput = JSON.parse(reviewString);
+    } catch (err) {
+      throw this.context.logger.error("Couldn't parse JSON output; Aborting", { err });
     }
-    const { confidenceThreshold: rawThreshold, reviewComment: rawComment } = parsedInput;
-
-    if (typeof rawThreshold !== "number" && (typeof rawThreshold !== "string" || isNaN(Number(rawThreshold)))) {
-      throw this.context.logger.error("Invalid or missing confidenceThreshold", parsedInput);
+    if (typeof reviewOutput.reviewComment !== "string") {
+      throw this.context.logger.error("LLM failed to output review comment successfully");
+    }
+    const confidenceThreshold = reviewOutput.confidenceThreshold;
+    if (Number.isNaN(Number(confidenceThreshold))) {
+      throw this.context.logger.error("LLM failed to output a confidence threshold successfully");
     }
 
-    if (typeof rawComment !== "string") {
-      throw this.context.logger.error("Invalid or missing reviewComment", parsedInput);
-    }
-
-    const confidenceThreshold = Number(rawThreshold);
-    const reviewComment = rawComment;
-
-    return { confidenceThreshold, reviewComment };
+    return { confidenceThreshold: Number(reviewOutput.confidenceThreshold), reviewComment: reviewOutput.reviewComment };
   }
 }

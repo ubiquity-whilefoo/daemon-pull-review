@@ -1,5 +1,3 @@
-/* eslint-disable sonarjs/no-duplicate-string */
-
 import Anthropic from "@anthropic-ai/sdk";
 import { Context } from "../../../types";
 import { ContentBlock } from "@anthropic-ai/sdk/resources";
@@ -32,8 +30,11 @@ export class AnthropicCompletion extends SuperAnthropic {
 
   getModelMaxTokenLimit(model: string): number {
     const tokenLimits = new Map<string, number>([["claude-3.5-sonnet", 200000]]);
-
-    return tokenLimits.get(model) || 200000;
+    const tokenLimit = tokenLimits.get(model);
+    if (!tokenLimit) {
+      throw this.context.logger.error(`The token limits for configured model ${model} was not found`);
+    }
+    return tokenLimit;
   }
 
   getModelMaxOutputLimit(model: string): number {
@@ -42,13 +43,7 @@ export class AnthropicCompletion extends SuperAnthropic {
     return tokenLimits.get(model) || 4096;
   }
 
-  async createCompletion(
-    model: string = "claude-3.5-sonnet",
-    localContext: string,
-    groundTruths: string[],
-    botName: string,
-    maxTokens: number
-  ): Promise<CompletionsType> {
+  async createCompletion(model: string, localContext: string, groundTruths: string[], botName: string, maxTokens: number): Promise<CompletionsType> {
     const query = `Perform code review using the diff and spec and output a JSON format with key 'confidenceThreshold': (0-1) and reviewComment: <string>. A 0 indicates that the code review failed and 1 mean its passed and you should output the review comment to be "This pull request has passed the automated review, a reviewer will review this pull request shortly". YOU SHOULD ONLY OUTPUT RAW JSON DATA`;
     const sysMsg = [
       "You Must obey the following ground truths: ",
@@ -121,7 +116,7 @@ export class AnthropicCompletion extends SuperAnthropic {
     });
 
     if (!res.content || res.content.length === 0) {
-      throw this.context.logger.error("Unexpected no response from ");
+      throw this.context.logger.error("Unexpected no response from claude");
     }
 
     const content = res.content[0];
