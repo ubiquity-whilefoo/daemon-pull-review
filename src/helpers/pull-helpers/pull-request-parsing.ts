@@ -3,13 +3,14 @@ import { TokenLimits } from "../../types/llm";
 import { EncodeOptions } from "gpt-tokenizer/esm/GptEncoding";
 import { Context } from "../../types";
 import { getExcludedFiles } from "../excluded-files";
+import { minimatch } from "minimatch";
 
 export async function processPullRequestDiff(diff: string, tokenLimits: TokenLimits, logger: Context["logger"]) {
   const { runningTokenCount, tokensRemaining } = tokenLimits;
 
   // parse the diff into per-file diffs for quicker processing
-  const excludedFiles = await getExcludedFiles();
-  const perFileDiffs = parsePerFileDiffs(diff).filter((file) => excludedFiles.some((excludedFile) => !file.filename.startsWith(excludedFile)));
+  const excludedFilePatterns = await getExcludedFiles();
+  const perFileDiffs = parsePerFileDiffs(diff).filter((file) => excludedFilePatterns.every((pattern) => !minimatch(file.filename, pattern)));
 
   const accurateFileDiffStats = await Promise.all(
     perFileDiffs.map(async (file) => {
