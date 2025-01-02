@@ -197,9 +197,9 @@ describe("Pull Reviewer tests", () => {
 
     await expect(pullReviewer.getTaskNumberFromPullRequest(context)).rejects.toMatchObject({
       logMessage: {
-        diff: "```diff\n! You need to link an issue before converting the PR to ready for review.\n```",
+        diff: "```diff\n! You need to link an issue before converting the pull request to ready for review.\n```",
         level: "error",
-        raw: "You need to link an issue before converting the PR to ready for review.",
+        raw: "You need to link an issue before converting the pull request to ready for review.",
         type: "error",
       },
       metadata: {

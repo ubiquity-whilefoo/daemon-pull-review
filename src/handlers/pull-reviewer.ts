@@ -244,9 +244,9 @@ export class PullReviewer {
 
     if (closingIssues.length === 0) {
       await this.convertPullToDraft();
-      throw this.context.logger.error("You need to link an issue before converting the PR to ready for review.");
+      throw this.context.logger.error("You need to link an issue before converting the pull request to ready for review.");
     } else if (closingIssues.length > 1) {
-      throw this.context.logger.error("Multiple tasks are linked to this PR. This needs to be investigated to determine the best way to handle it.", {
+      throw this.context.logger.error("Multiple tasks are linked to this pull request. This needs to be investigated to determine the best way to handle it.", {
         closingIssues,
         pull_request,
       });

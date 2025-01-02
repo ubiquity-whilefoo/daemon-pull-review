@@ -16,7 +16,7 @@ export async function fetchPullRequestDiff(context: Context, org: string, repo: 
 
     diff = diffResponse.data as unknown as string;
   } catch (e) {
-    context.logger.error(`Error fetching PR data`, { owner: org, repo, issue, err: String(e) });
+    context.logger.error(`Error fetching pull request data`, { owner: org, repo, issue, err: String(e) });
     return { diff: null };
   }
 

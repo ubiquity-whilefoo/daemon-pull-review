@@ -39,8 +39,11 @@ export class AnthropicCompletion extends SuperAnthropic {
 
   getModelMaxOutputLimit(model: string): number {
     const tokenLimits = new Map<string, number>([["claude-3.5-sonnet", 4096]]);
-
-    return tokenLimits.get(model) || 4096;
+    const tokenLimit = tokenLimits.get(model);
+    if (!tokenLimit) {
+      throw this.context.logger.error(`The token limits for configured model ${model} was not found`);
+    }
+    return tokenLimit;
   }
 
   async createCompletion(model: string, localContext: string, groundTruths: string[], botName: string, maxTokens: number): Promise<CompletionsType> {
@@ -71,7 +74,7 @@ export class AnthropicCompletion extends SuperAnthropic {
     });
 
     if (!res.content || res.content.length === 0) {
-      throw this.context.logger.error("Unexpected no response from claude");
+      throw this.context.logger.error("Unexpected no response from LLM");
     }
 
     // Use type guard to safely handle the response
@@ -116,7 +119,7 @@ export class AnthropicCompletion extends SuperAnthropic {
     });
 
     if (!res.content || res.content.length === 0) {
-      throw this.context.logger.error("Unexpected no response from claude");
+      throw this.context.logger.error("Unexpected no response from LLM");
     }
 
     const content = res.content[0];
