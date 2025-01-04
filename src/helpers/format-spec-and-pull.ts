@@ -8,7 +8,7 @@ import { fetchPullRequestDiff } from "./pull-helpers/fetch-diff";
 export async function formatSpecAndPull(context: Context<"pull_request.opened" | "pull_request.ready_for_review">, issue: Issue): Promise<string> {
   const tokenLimits: TokenLimits = {
     modelMaxTokenLimit: context.adapters.openRouter.completions.getModelMaxTokenLimit(context.config.openRouterAiModel),
-    maxCompletionTokens: context.config.maxTokens || context.adapters.openRouter.completions.getModelMaxOutputLimit(context.config.openRouterAiModel),
+    maxCompletionTokens: context.adapters.openRouter.completions.getModelMaxOutputLimit(context.config.openRouterAiModel),
     runningTokenCount: 0,
     tokensRemaining: 0,
   };

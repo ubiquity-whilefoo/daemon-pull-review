@@ -45,7 +45,7 @@ export class OpenRouterCompletion extends SuperOpenRouter {
     this.context.logger.info(`System message: ${sysMsg}`);
 
     const res = await this.client.chat.completions.create({
-      model: `anthropic/${model}`,
+      model: model,
       messages: [
         {
           role: "system",
