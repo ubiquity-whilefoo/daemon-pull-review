@@ -9,8 +9,8 @@ import { StaticDecode, Type as T } from "@sinclair/typebox";
  */
 
 export const pluginSettingsSchema = T.Object({
-  anthropicAiModel: T.String({ default: "claude-3.5-sonnet" }),
-  anthropicAiBaseUrl: T.Optional(T.String()),
+  openRouterAiModel: T.String({ default: "claude-3.5-sonnet" }),
+  openRouterBaseUrl: T.String({ default: "https://openrouter.ai/api/v1" }),
   maxTokens: T.Number({ default: 10000 }),
 });
 

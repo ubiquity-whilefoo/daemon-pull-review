@@ -19,16 +19,16 @@ plugins:
   - uses:
       - plugin: http://localhost:4000
         with:
-          anthropicAiModel: "" # Optional - defaults to latest Claude model
-          anthropicAiBaseUrl: "" # Optional - defaults to Anthropic's API endpoint
+          openRouterAiModel: "" # Optional - defaults to "anthropic/claude-3.5-sonnet"
+          openRouterBaseUrl: "" # Optional - defaults to Open Router's API endpoint
 ```
 
 `.dev.vars` (for local testing):
 
-specify the AnthropicAiBase URL in the `.ubiquity-os.config.yml` file and set the `ANTHROPIC_API_KEY` in the `.dev.vars` file.
+specify the OpenRouterBase URL in the `.ubiquity-os.config.yml` file and set the `OPENROUTER_API_KEY` in the `.dev.vars` file.
 
 ```sh
-ANTHROPIC_API_KEY=your_anthropic_api_key
+OPENROUTER_API_KEY=YOUR_OPENROUTER_API_KEY
 UBIQUITY_OS_APP_NAME="UbiquityOS"
 ```
 

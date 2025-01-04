@@ -1,35 +1,19 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { Context } from "../../../types";
-import { ContentBlock } from "@anthropic-ai/sdk/resources";
-import { SuperAnthropic } from "./claude";
+import { SuperOpenRouter } from "./open-router";
+import OpenAI from "openai";
 
 export interface CompletionsType {
   answer: string;
   groundTruths: string[];
-  tokenUsage: {
-    input: number;
-    output: number;
-    total: number;
-  };
 }
 
-// Type guard for content block
-interface TextBlock {
-  type: "text";
-  text: string;
-}
-
-function isTextBlock(content: ContentBlock): content is TextBlock {
-  return content?.type === "text" && typeof content?.text === "string";
-}
-
-export class AnthropicCompletion extends SuperAnthropic {
-  constructor(client: Anthropic, context: Context) {
+export class OpenRouterCompletion extends SuperOpenRouter {
+  constructor(client: OpenAI, context: Context) {
     super(client, context);
   }
 
   getModelMaxTokenLimit(model: string): number {
-    const tokenLimits = new Map<string, number>([["claude-3.5-sonnet", 200000]]);
+    const tokenLimits = new Map<string, number>([["anthropic/claude-3.5-sonnet", 200000]]);
     const tokenLimit = tokenLimits.get(model);
     if (!tokenLimit) {
       throw this.context.logger.error(`The token limits for configured model ${model} was not found`);
@@ -38,7 +22,7 @@ export class AnthropicCompletion extends SuperAnthropic {
   }
 
   getModelMaxOutputLimit(model: string): number {
-    const tokenLimits = new Map<string, number>([["claude-3.5-sonnet", 4096]]);
+    const tokenLimits = new Map<string, number>([["anthropic/claude-3.5-sonnet", 4096]]);
     const tokenLimit = tokenLimits.get(model);
     if (!tokenLimit) {
       throw this.context.logger.error(`The token limits for configured model ${model} was not found`);
@@ -60,10 +44,13 @@ export class AnthropicCompletion extends SuperAnthropic {
 
     this.context.logger.info(`System message: ${sysMsg}`);
 
-    const res = await this.client.messages.create({
-      model: model,
-      system: sysMsg,
+    const res = await this.client.chat.completions.create({
+      model: `anthropic/${model}`,
       messages: [
+        {
+          role: "system",
+          content: sysMsg,
+        },
         {
           role: "user",
           content: query,
@@ -73,44 +60,44 @@ export class AnthropicCompletion extends SuperAnthropic {
       temperature: 0,
     });
 
-    if (!res.content || res.content.length === 0) {
+    if (!res.choices || res.choices.length === 0) {
       throw this.context.logger.error("Unexpected no response from LLM");
     }
 
     // Use type guard to safely handle the response
-    const content = res.content[0];
-    if (!isTextBlock(content)) {
+    const answer = res.choices[0].message.content;
+    if (!answer) {
       throw this.context.logger.error("Unexpected response format: Expected text block");
     }
 
-    const answer = content.text;
+    const inputTokens = res.usage?.prompt_tokens;
+    const outputTokens = res.usage?.completion_tokens;
 
-    const inputTokens = res.usage.input_tokens;
-    const outputTokens = res.usage.output_tokens;
-
-    this.context.logger.info(`Number of tokens used: ${inputTokens + outputTokens}`);
+    if (inputTokens && outputTokens) {
+      this.context.logger.info(`Number of tokens used: ${inputTokens + outputTokens}`);
+    } else {
+      this.context.logger.info(`LLM did not output usage statistics`);
+    }
 
     return {
       answer,
       groundTruths,
-      tokenUsage: {
-        input: inputTokens,
-        output: outputTokens,
-        total: inputTokens + outputTokens,
-      },
     };
   }
 
   async createGroundTruthCompletion(context: Context, groundTruthSource: string, systemMsg: string): Promise<string | null> {
     const {
-      config: { anthropicAiModel },
+      config: { openRouterAiModel },
     } = context;
 
-    const res = await this.client.messages.create({
-      model: anthropicAiModel,
-      system: systemMsg,
-      max_tokens: this.getModelMaxTokenLimit(anthropicAiModel),
+    const res = await this.client.chat.completions.create({
+      model: openRouterAiModel,
+      max_tokens: this.getModelMaxTokenLimit(openRouterAiModel),
       messages: [
+        {
+          role: "system",
+          content: systemMsg,
+        },
         {
           role: "user",
           content: groundTruthSource,
@@ -118,15 +105,15 @@ export class AnthropicCompletion extends SuperAnthropic {
       ],
     });
 
-    if (!res.content || res.content.length === 0) {
+    if (!res.choices || res.choices.length === 0) {
       throw this.context.logger.error("Unexpected no response from LLM");
     }
 
-    const content = res.content[0];
-    if (!isTextBlock(content)) {
+    const answer = res.choices[0].message.content;
+    if (!answer) {
       throw this.context.logger.error("Unexpected response format: Expected text block");
     }
 
-    return content.text;
+    return answer;
   }
 }

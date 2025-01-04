@@ -151,9 +151,9 @@ export class PullReviewer {
   async reviewPull() {
     const {
       env: { UBIQUITY_OS_APP_NAME },
-      config: { anthropicAiModel },
+      config: { openRouterAiModel },
       adapters: {
-        anthropic: { completions },
+        openRouter: { completions },
       },
     } = this.context;
 
@@ -175,11 +175,11 @@ export class PullReviewer {
 
     const groundTruths = await findGroundTruths(this.context, { taskSpecification });
     return await completions.createCompletion(
-      anthropicAiModel,
+      openRouterAiModel,
       formattedSpecAndPull,
       groundTruths,
       UBIQUITY_OS_APP_NAME,
-      completions.getModelMaxTokenLimit(anthropicAiModel)
+      completions.getModelMaxTokenLimit(openRouterAiModel)
     );
   }
 

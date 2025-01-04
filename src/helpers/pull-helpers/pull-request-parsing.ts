@@ -5,61 +5,54 @@ import { Context } from "../../types";
 import { getExcludedFiles } from "../excluded-files";
 import { minimatch } from "minimatch";
 
-export async function processPullRequestDiff(diff: string, tokenLimits: TokenLimits, logger: Context["logger"]) {
-  const { runningTokenCount, tokensRemaining } = tokenLimits;
-
-  // parse the diff into per-file diffs for quicker processing
-  const excludedFilePatterns = await getExcludedFiles();
-  const perFileDiffs = parsePerFileDiffs(diff).filter((file) => excludedFilePatterns.every((pattern) => !minimatch(file.filename, pattern)));
+async function filterAndSortDiffs(diff: string, excludedPatterns: string[]): Promise<{ filename: string; tokenCount: number; diffContent: string }[]> {
+  const perFileDiffs = parsePerFileDiffs(diff).filter((file) => excludedPatterns.every((pattern) => !minimatch(file.filename, pattern)));
 
   const accurateFileDiffStats = await Promise.all(
     perFileDiffs.map(async (file) => {
       const tokenCountArray = await encodeAsync(file.diffContent, { disallowedSpecial: new Set() });
-      const tokenCount = tokenCountArray.length;
-      return { filename: file.filename, tokenCount, diffContent: file.diffContent };
+      return { filename: file.filename, tokenCount: tokenCountArray.length, diffContent: file.diffContent };
     })
   );
 
-  // Sort by token count to process smallest files first
-  accurateFileDiffStats.sort((a, b) => a.tokenCount - b.tokenCount);
+  // Sort files by token count in ascending order
+  return accurateFileDiffStats.sort((a, b) => a.tokenCount - b.tokenCount);
+}
 
+function selectIncludedFiles(
+  files: { filename: string; tokenCount: number; diffContent: string }[],
+  tokenLimits: TokenLimits,
+  logger: Context["logger"]
+): typeof files {
+  const { runningTokenCount, tokensRemaining } = tokenLimits;
   let currentTokenCount = runningTokenCount;
-  const includedFileDiffs = [];
+  const includedFiles = [];
 
-  // Include files until we reach the token limit
-  for (const file of accurateFileDiffStats) {
+  for (const file of files) {
     if (currentTokenCount + file.tokenCount > tokensRemaining) {
       logger.info(`Skipping ${file.filename} to stay within token limits.`);
       continue;
     }
-    includedFileDiffs.push(file);
+    includedFiles.push(file);
     currentTokenCount += file.tokenCount;
   }
 
-  // If no files can be included, return null
-  if (includedFileDiffs.length === 0) {
+  return includedFiles;
+}
+
+export async function processPullRequestDiff(diff: string, tokenLimits: TokenLimits, logger: Context["logger"]) {
+  const excludedFilePatterns = await getExcludedFiles();
+  const sortedDiffs = await filterAndSortDiffs(diff, excludedFilePatterns);
+
+  const includedFiles = selectIncludedFiles(sortedDiffs, tokenLimits, logger);
+
+  if (includedFiles.length === 0) {
     logger.error(`Cannot include any files from diff without exceeding token limits.`);
     return { diff: null };
   }
 
-  // Recalculate the current token count after including the files
-  currentTokenCount = includedFileDiffs.reduce((sum, file) => sum + file.tokenCount, runningTokenCount);
-
-  // Remove files from the end of the list until we are within token limits
-  while (currentTokenCount > tokensRemaining && includedFileDiffs.length > 0) {
-    const removedFile = includedFileDiffs.pop();
-    currentTokenCount -= removedFile?.tokenCount || 0;
-    logger.info(`Excluded ${removedFile?.filename || "Unknown filename"} after accurate token count exceeded limits.`);
-  }
-
-  if (includedFileDiffs.length === 0) {
-    logger.error(`Cannot include any files from diff after accurate token count calculation.`);
-    return { diff: null };
-  }
-
-  // Build the diff with the included files
-  const currentDiff = includedFileDiffs.map((file) => file.diffContent).join("\n");
-
+  // Build and return the final diff
+  const currentDiff = includedFiles.map((file) => file.diffContent).join("\n");
   return { diff: currentDiff };
 }
 

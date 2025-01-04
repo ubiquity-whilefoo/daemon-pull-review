@@ -1,13 +1,13 @@
 import { Context } from "../types";
-import { AnthropicCompletion } from "./claude/helpers/completions";
-import Anthropic from "@anthropic-ai/sdk";
-import { SuperAnthropic } from "./claude/helpers/claude";
+import { OpenRouterCompletion } from "./open-router/helpers/completions";
+import { SuperOpenRouter } from "./open-router/helpers/open-router";
+import OpenAI from "openai";
 
-export function createAdapters(anthropic: Anthropic, context: Context) {
+export function createAdapters(openRouter: OpenAI, context: Context) {
   return {
-    anthropic: {
-      completions: new AnthropicCompletion(anthropic, context),
-      super: new SuperAnthropic(anthropic, context),
+    openRouter: {
+      completions: new OpenRouterCompletion(openRouter, context),
+      super: new SuperOpenRouter(openRouter, context),
     },
   };
 }

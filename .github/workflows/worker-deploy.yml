@@ -45,11 +45,11 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           secrets: |
-            ANTHROPIC_API_KEY
+            OPENROUTER_API_KEY
             UBIQUITY_OS_APP_NAME
             ${{ secrets.KERNEL_PUBLIC_KEY && secrets.KERNEL_PUBLIC_KEY != '' && 'KERNEL_PUBLIC_KEY' || '' }}
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY}}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY}}
           UBIQUITY_OS_APP_NAME: ${{ secrets.UBIQUITY_OS_APP_NAME }}
           KERNEL_PUBLIC_KEY: ${{ secrets.KERNEL_PUBLIC_KEY }}
 

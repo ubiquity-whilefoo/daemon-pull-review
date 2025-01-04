@@ -12,7 +12,7 @@ export async function findGroundTruths(context: Context, params: CodeReviewAppPa
 async function findCodeReviewTruths(context: Context, params: CodeReviewAppParams, systemMsgObj: CodeReviewGroundTruthSystemMessage): Promise<string[]> {
   const {
     adapters: {
-      anthropic: { completions },
+      openRouter: { completions },
     },
   } = context;
   const systemMsg = createGroundTruthSysMsg(systemMsgObj);

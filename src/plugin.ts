@@ -1,17 +1,16 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { Context } from "./types/context";
 import { createAdapters } from "./adapters";
 import { callCallbacks } from "./helpers/callback-proxy";
+import OpenAI from "openai";
 
 export async function plugin(context: Context) {
   const { env, config } = context;
 
-  const anthropicAiObject = {
-    apiKey: env.ANTHROPIC_API_KEY,
-    ...(config.anthropicAiBaseUrl && { baseURL: config.anthropicAiBaseUrl }),
-  };
-  const anthropicAiClient = new Anthropic(anthropicAiObject);
-  context.adapters = createAdapters(anthropicAiClient, context);
+  const openRouterClient = new OpenAI({
+    apiKey: env.OPENROUTER_API_KEY,
+    baseURL: config.openRouterBaseUrl,
+  });
+  context.adapters = createAdapters(openRouterClient, context);
 
   return await callCallbacks(context, context.eventName);
 }

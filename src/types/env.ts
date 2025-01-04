@@ -9,7 +9,7 @@ import { StaticDecode } from "@sinclair/typebox";
  * They are used with `process.env` but are type-safe.
  */
 export const envSchema = T.Object({
-  ANTHROPIC_API_KEY: T.String(),
+  OPENROUTER_API_KEY: T.String(),
   UBIQUITY_OS_APP_NAME: T.String({ default: "UbiquityOS" }),
   KERNEL_PUBLIC_KEY: T.Optional(T.String()),
   LOG_LEVEL: T.Optional(T.String()),
