@@ -28,7 +28,7 @@ jobs:
     environment: ${{ github.ref == 'refs/heads/main' && 'main' || 'development' }}
     env:
       KERNEL_PUBLIC_KEY: ${{ secrets.KERNEL_PUBLIC_KEY }}
-      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       UBIQUITY_OS_APP_NAME: ${{ secrets.UBIQUITY_OS_APP_NAME }}
 
     steps:
