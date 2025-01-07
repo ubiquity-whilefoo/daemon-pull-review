@@ -40,14 +40,14 @@ function selectIncludedFiles(
   return includedFiles;
 }
 
-export async function processPullRequestDiff(diff: string, tokenLimits: TokenLimits, logger: Context["logger"]) {
-  const excludedFilePatterns = await getExcludedFiles();
+export async function processPullRequestDiff(diff: string, tokenLimits: TokenLimits, context: Context) {
+  const excludedFilePatterns = await getExcludedFiles(context);
   const sortedDiffs = await filterAndSortDiffs(diff, excludedFilePatterns);
 
-  const includedFiles = selectIncludedFiles(sortedDiffs, tokenLimits, logger);
+  const includedFiles = selectIncludedFiles(sortedDiffs, tokenLimits, context.logger);
 
   if (includedFiles.length === 0) {
-    logger.error(`Cannot include any files from diff without exceeding token limits.`);
+    context.logger.error(`Cannot include any files from diff without exceeding token limits.`);
     return { diff: null };
   }
 
@@ -66,29 +66,18 @@ async function encodeAsync(text: string, options: EncodeOptions): Promise<number
 
 // Helper to parse a diff into per-file diffs
 function parsePerFileDiffs(diff: string): { filename: string; diffContent: string }[] {
-  // regex to capture diff sections, including the last file
-  const diffPattern = /^diff --git a\/(.*?) b\/.*$/gm;
-  let match: RegExpExecArray | null;
-  const perFileDiffs = [];
-  let lastIndex = 0;
+  // Split the diff string into chunks for each file
+  const fileDiffs = diff.split(/^diff --git /gm).filter((chunk) => chunk.trim() !== "");
 
-  // iterate over each file in the diff
-  while ((match = diffPattern.exec(diff)) !== null) {
-    const filename = match[1];
-    const startIndex = match.index;
+  return fileDiffs.map((chunk) => {
+    // Extract the filename and content from each chunk
+    const lines = chunk.split("\n");
+    const firstLine = lines.shift()?.trim() || "";
+    const [filename] = firstLine.split(" ").map((part) => part.replace(/^a\//, ""));
 
-    // if we have pushed a file into the array, "append" the diff content
-    if (perFileDiffs.length > 0) {
-      perFileDiffs[perFileDiffs.length - 1].diffContent = diff.substring(lastIndex, startIndex).trim();
-    }
-
-    perFileDiffs.push({ filename, diffContent: "" });
-    lastIndex = startIndex;
-  }
-  // append the last file's diff content
-  if (perFileDiffs.length > 0 && lastIndex < diff.length) {
-    perFileDiffs[perFileDiffs.length - 1].diffContent = diff.substring(lastIndex).trim();
-  }
-
-  return perFileDiffs;
+    return {
+      filename,
+      diffContent: `diff --git ${firstLine}\n${lines.join("\n").trim()}`,
+    };
+  });
 }

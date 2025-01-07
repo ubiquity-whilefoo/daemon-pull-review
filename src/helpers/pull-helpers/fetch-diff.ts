@@ -20,5 +20,5 @@ export async function fetchPullRequestDiff(context: Context, org: string, repo: 
     return { diff: null };
   }
 
-  return await processPullRequestDiff(diff, tokenLimits, context.logger);
+  return await processPullRequestDiff(diff, tokenLimits, context);
 }

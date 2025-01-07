@@ -34,31 +34,33 @@ async function parseGitAttributes(content: string): Promise<GitAttributes[]> {
 }
 
 export async function getExcludedFiles(context: Context) {
-  const [gitIgnoreContent, gitAttributesContent] = await Promise.all([getFileContent(".gitignore", context), getFileContent(".gitattributes", context)]);
+  const [gitIgnoreContent, gitAttributesContent] = await Promise.all([getFileContent(context, ".gitignore"), getFileContent(context, ".gitattributes")]);
 
-  const gitAttributesLinguistGenerated = (await parseGitAttributes(gitAttributesContent))
-    .filter((v) => v.attributes["linguist-generated"])
-    .map((v) => v.pattern);
-  const gitIgnoreExcludedFiles = gitIgnoreContent.split("\n").filter((v) => !v.startsWith("#"));
+  const gitAttributesLinguistGenerated = gitAttributesContent
+    ? (await parseGitAttributes(gitAttributesContent)).filter((v) => v.attributes["linguist-generated"]).map((v) => v.pattern)
+    : [];
+  const gitIgnoreExcludedFiles = gitIgnoreContent ? gitIgnoreContent.split("\n").filter((v) => !v.startsWith("#")) : [];
   return [...gitAttributesLinguistGenerated, ...gitIgnoreExcludedFiles];
 }
 
-async function getFileContent(path: string, context: Context): Promise<string> {
+async function getFileContent(context: Context, path: string): Promise<string | null> {
   try {
     const response = await context.octokit.rest.repos.getContent({
       owner: context.payload.repository.owner.login,
       repo: context.payload.repository.name,
       path,
-      ref: context.payload.pull_request.head.sha,
+      ref: context.payload.pull_request.base.sha,
     });
 
     // GitHub API returns content as base64
     if ("content" in response.data && !Array.isArray(response.data)) {
       return Buffer.from(response.data.content, "base64").toString("utf-8");
     }
-    return "";
-  } catch {
-    // File doesn't exist
-    return "";
+    return null;
+  } catch (err) {
+    if (err instanceof Error && "status" in err && err.status === 404) {
+      return null;
+    }
+    throw context.logger.error(`Error fetching files to be excluded ${err}`);
   }
 }
