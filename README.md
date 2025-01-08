@@ -43,5 +43,5 @@ bun wrangler dev --env dev --port <your-port-number>
 ## Testing
 
 ```sh
-yarn test
+bun run test
 ```

@@ -7,7 +7,7 @@ import { CallbackResult } from "../types/proxy";
 import { closedByPullRequestsReferences, IssuesClosedByThisPr } from "../helpers/gql-queries";
 
 export class PullReviewer {
-  context: Context;
+  readonly context: Context;
   private _oneDay = 24 * 60 * 60 * 1000;
 
   constructor(context: Context<"pull_request.opened" | "pull_request.ready_for_review">) {
@@ -48,7 +48,10 @@ export class PullReviewer {
       await this.convertPullToDraft();
     }
 
-    await this.submitCodeReview(reviewComment, confidenceThreshold > 0.5 ? "COMMENT" : "REQUEST_CHANGES");
+    await this.submitCodeReview(
+      confidenceThreshold > 0.5 ? "This pull request has passed the automated review, a reviewer will review this pull request shortly" : reviewComment,
+      confidenceThreshold > 0.5 ? "COMMENT" : "REQUEST_CHANGES"
+    );
     return { status: 200, reason: "Success" };
   }
 
@@ -89,12 +92,11 @@ export class PullReviewer {
 
     logger.info(`${repository.owner.login}/${repository.name}#${number} - ${action}`);
 
-    // Use octokit.paginate to automatically handle pagination
     const timeline = await this.context.octokit.paginate(this.context.octokit.rest.issues.listEvents, {
       owner: owner.login,
       repo: name,
       issue_number: number,
-      per_page: 100, // Optional: customize items per page
+      per_page: 100,
     });
 
     const reviews = timeline.filter((event) => event.event === "reviewed");

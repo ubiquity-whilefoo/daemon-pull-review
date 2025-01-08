@@ -8,9 +8,12 @@ import { StaticDecode, Type as T } from "@sinclair/typebox";
  * which are built into the context object from setup().
  */
 
-export const pluginSettingsSchema = T.Object({
-  openRouterAiModel: T.String({ default: "anthropic/claude-3.5-sonnet" }),
-  openRouterBaseUrl: T.String({ default: "https://openrouter.ai/api/v1" }),
-});
+export const pluginSettingsSchema = T.Object(
+  {
+    openRouterAiModel: T.String({ default: "anthropic/claude-3.5-sonnet" }),
+    openRouterBaseUrl: T.String({ default: "https://openrouter.ai/api/v1" }),
+  },
+  { default: {} }
+);
 
 export type PluginSettings = StaticDecode<typeof pluginSettingsSchema>;

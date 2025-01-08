@@ -42,7 +42,7 @@ export class OpenRouterCompletion extends SuperOpenRouter {
       localContext,
     ].join("\n");
 
-    this.context.logger.info(`System message: ${sysMsg}`);
+    this.context.logger.debug(`System message: ${sysMsg}`);
 
     const res = await this.client.chat.completions.create({
       model: model,
@@ -64,7 +64,6 @@ export class OpenRouterCompletion extends SuperOpenRouter {
       throw this.context.logger.error("Unexpected no response from LLM");
     }
 
-    // Use type guard to safely handle the response
     const answer = res.choices[0].message.content;
     if (!answer) {
       throw this.context.logger.error("Unexpected response format: Expected text block");

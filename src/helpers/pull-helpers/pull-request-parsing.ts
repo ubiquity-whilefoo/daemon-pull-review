@@ -65,7 +65,7 @@ async function encodeAsync(text: string, options: EncodeOptions): Promise<number
 }
 
 // Helper to parse a diff into per-file diffs
-function parsePerFileDiffs(diff: string): { filename: string; diffContent: string }[] {
+export function parsePerFileDiffs(diff: string): { filename: string; diffContent: string }[] {
   // Split the diff string into chunks for each file
   const fileDiffs = diff.split(/^diff --git /gm).filter((chunk) => chunk.trim() !== "");
 
