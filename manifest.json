@@ -4,6 +4,7 @@
   "ubiquity:listeners": ["pull_request.opened", "pull_request.ready_for_review"],
   "skipBotEvents": true,
   "configuration": {
+    "default": {},
     "type": "object",
     "properties": {
       "openRouterAiModel": {
