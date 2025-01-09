@@ -44,14 +44,13 @@ export class PullReviewer {
     const pullReviewData = await this.reviewPull();
     const { reviewComment, confidenceThreshold } = this.validateReviewOutput(pullReviewData.answer);
 
-    if (confidenceThreshold < 0.5) {
+    if (confidenceThreshold > 0.5) {
+      await this.submitCodeReview("This pull request has passed the automated review, a reviewer will review this pull request shortly", "COMMENT");
+    } else {
       await this.convertPullToDraft();
+      await this.submitCodeReview(reviewComment, "REQUEST_CHANGES");
     }
 
-    await this.submitCodeReview(
-      confidenceThreshold > 0.5 ? "This pull request has passed the automated review, a reviewer will review this pull request shortly" : reviewComment,
-      confidenceThreshold > 0.5 ? "COMMENT" : "REQUEST_CHANGES"
-    );
     return { status: 200, reason: "Success" };
   }
 
