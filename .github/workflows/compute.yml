@@ -30,6 +30,8 @@ jobs:
       KERNEL_PUBLIC_KEY: ${{ secrets.KERNEL_PUBLIC_KEY }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       UBIQUITY_OS_APP_NAME: ${{ secrets.UBIQUITY_OS_APP_NAME }}
+      PLUGIN_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
     steps:
       - name: Checkout
