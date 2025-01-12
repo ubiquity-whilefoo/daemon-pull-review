@@ -17,7 +17,7 @@ With its huge context window, we are able to feed the entire issue specification
 ```yml
 plugins:
   - uses:
-      - plugin: http://localhost:4000
+      - plugin: ubiquity-os-marketplace/daemon-pull-review
         with:
           openRouterAiModel: "" # Optional - defaults to "anthropic/claude-3.5-sonnet"
           openRouterBaseUrl: "" # Optional - defaults to Open Router's API endpoint
@@ -30,14 +30,6 @@ specify the OpenRouterBase URL in the `.ubiquity-os.config.yml` file and set the
 ```sh
 OPENROUTER_API_KEY=YOUR_OPENROUTER_API_KEY
 UBIQUITY_OS_APP_NAME="UbiquityOS"
-```
-
-## Custom Port Configuration
-
-If you specify a different port in your config file instead of the default port 4005, you'll need to start the development server with the corresponding port number:
-
-```sh
-bun wrangler dev --env dev --port <your-port-number>
 ```
 
 ## Testing

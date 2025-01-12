@@ -58,6 +58,28 @@ export class OpenRouterCompletion extends SuperOpenRouter {
       ],
       max_tokens: maxTokens,
       temperature: 0,
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "review_output",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              confidenceThreshold: {
+                type: "number",
+                description: "Confidence of the review between 0-1",
+              },
+              reviewComment: {
+                type: "string",
+                description: "The review comment for the pull request",
+              },
+            },
+            required: ["confidenceThreshold", "reviewComment"],
+            additionalProperties: false,
+          },
+        },
+      },
     });
 
     if (!res.choices || res.choices.length === 0) {
@@ -91,7 +113,7 @@ export class OpenRouterCompletion extends SuperOpenRouter {
 
     const res = await this.client.chat.completions.create({
       model: openRouterAiModel,
-      max_tokens: this.getModelMaxTokenLimit(openRouterAiModel),
+      max_tokens: this.getModelMaxOutputLimit(openRouterAiModel),
       messages: [
         {
           role: "system",
@@ -102,6 +124,22 @@ export class OpenRouterCompletion extends SuperOpenRouter {
           content: groundTruthSource,
         },
       ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "ground_truths",
+          strict: true,
+          schema: {
+            type: "array",
+            items: {
+              type: "string",
+              description: "A ground truth statement",
+            },
+            minItems: 10,
+            maxItems: 10,
+          },
+        },
+      },
     });
 
     if (!res.choices || res.choices.length === 0) {
