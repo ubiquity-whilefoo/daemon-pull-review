@@ -203,7 +203,7 @@ describe("Pull Reviewer tests", () => {
         type: "error",
       },
       metadata: {
-        caller: "PullReviewer.getTaskNumberFromPullRequest",
+        caller: "PullReviewer.error",
       },
     });
   });
