@@ -42,7 +42,7 @@ export class OpenRouterCompletion extends SuperOpenRouter {
 
     this.context.logger.debug(`System message: ${sysMsg}`);
 
-    const res = await this.client.chat.completions.create({
+    const res = (await this.client.chat.completions.create({
       model: model,
       messages: [
         {
@@ -56,10 +56,13 @@ export class OpenRouterCompletion extends SuperOpenRouter {
       ],
       max_tokens: maxTokens,
       temperature: 0,
-    });
+    })) as OpenAI.Chat.Completions.ChatCompletion & {
+      _request_id?: string | null;
+      error: { message: string; code: number; metadata: object } | undefined;
+    };
 
     if (!res.choices || res.choices.length === 0) {
-      throw this.context.logger.error("Unexpected no response from LLM");
+      throw this.context.logger.error(`Unexpected no response from LLM, Reason: ${res.error ? res.error.message : "No reason specified"}`);
     }
 
     const answer = res.choices[0].message.content;
@@ -87,7 +90,7 @@ export class OpenRouterCompletion extends SuperOpenRouter {
       config: { openRouterAiModel },
     } = context;
 
-    const res = await this.client.chat.completions.create({
+    const res = (await this.client.chat.completions.create({
       model: openRouterAiModel,
       max_tokens: this.getModelMaxOutputLimit(openRouterAiModel),
       messages: [
@@ -100,12 +103,14 @@ export class OpenRouterCompletion extends SuperOpenRouter {
           content: groundTruthSource,
         },
       ],
-    });
+    })) as OpenAI.Chat.Completions.ChatCompletion & {
+      _request_id?: string | null;
+      error: { message: string; code: number; metadata: object } | undefined;
+    };
 
     if (!res.choices || res.choices.length === 0) {
-      throw this.context.logger.error("Unexpected no response from LLM");
+      throw this.context.logger.error(`Unexpected no response from LLM, Reason: ${res.error ? res.error.message : "No reason specified"}`);
     }
-
     const answer = res.choices[0].message.content;
     if (!answer) {
       throw this.context.logger.error("Unexpected response format: Expected text block");
