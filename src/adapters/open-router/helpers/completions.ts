@@ -13,8 +13,7 @@ export class OpenRouterCompletion extends SuperOpenRouter {
   }
 
   getModelMaxTokenLimit(model: string): number {
-    const tokenLimits = new Map<string, number>([["anthropic/claude-3.5-sonnet", 200000]]);
-    const tokenLimit = tokenLimits.get(model);
+    const tokenLimit = this.context.config.tokenLimit.context;
     if (!tokenLimit) {
       throw this.context.logger.error(`The token limits for configured model ${model} was not found`);
     }
@@ -22,8 +21,7 @@ export class OpenRouterCompletion extends SuperOpenRouter {
   }
 
   getModelMaxOutputLimit(model: string): number {
-    const tokenLimits = new Map<string, number>([["anthropic/claude-3.5-sonnet", 4096]]);
-    const tokenLimit = tokenLimits.get(model);
+    const tokenLimit = this.context.config.tokenLimit.completion;
     if (!tokenLimit) {
       throw this.context.logger.error(`The token limits for configured model ${model} was not found`);
     }

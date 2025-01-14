@@ -31,6 +31,8 @@ export class PullReviewer {
       return { status: 200, reason: logger.info("Cannot perform review at this time").logMessage.raw };
     } else if (pull_request.user.id !== this.context.payload.sender.id) {
       return { status: 200, reason: logger.info("Review wasn't requested by pull author").logMessage.raw };
+    } else if (pull_request.author_association === "COLLABORATOR") {
+      return { status: 200, reason: logger.info("Review was requested by core team, Skipping").logMessage.raw };
     }
 
     return await this._handleCodeReview();

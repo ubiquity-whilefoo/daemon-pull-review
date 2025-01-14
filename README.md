@@ -21,7 +21,11 @@ plugins:
         with:
           openRouterAiModel: "" # Optional - defaults to "anthropic/claude-3.5-sonnet"
           openRouterBaseUrl: "" # Optional - defaults to Open Router's API endpoint
+          tokenLimit: { context: 200000, output: 4096 } #  # Required if using custom openRouterAiModel. Defaults to Claude 3.5 Sonnet limits
 ```
+
+Important:
+If you specify a custom openRouterAiModel, you must also provide the appropriate tokenLimit configuration for that model. The default token limits are set for Claude 3.5 Sonnet and may not be suitable for other models.
 
 `.dev.vars` (for local testing):
 

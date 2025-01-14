@@ -12,6 +12,13 @@ export const pluginSettingsSchema = T.Object(
   {
     openRouterAiModel: T.String({ default: "anthropic/claude-3.5-sonnet" }),
     openRouterBaseUrl: T.String({ default: "https://openrouter.ai/api/v1" }),
+    tokenLimit: T.Object(
+      {
+        context: T.Number(),
+        completion: T.Number(),
+      },
+      { default: { context: 200000, completion: 4096 } }
+    ),
   },
   { default: {} }
 );
