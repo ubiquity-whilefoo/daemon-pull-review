@@ -47,7 +47,7 @@ export class PullReviewer {
     const { reviewComment, confidenceThreshold } = this.validateReviewOutput(pullReviewData.answer);
 
     if (confidenceThreshold > 0.5) {
-      await this.submitCodeReview("This pull request has passed the automated review", "COMMENT");
+      await this.submitCodeReview(undefined, "COMMENT");
     } else {
       await this.convertPullToDraft();
       await this.submitCodeReview(reviewComment, "REQUEST_CHANGES");
@@ -61,7 +61,7 @@ export class PullReviewer {
    * @param review - The review comment
    * @param status - The review status (APPROVE, REQUEST_CHANGES, COMMENT)
    */
-  async submitCodeReview(review: string, status: CodeReviewStatus): Promise<void> {
+  async submitCodeReview(review: string | undefined, status: CodeReviewStatus): Promise<void> {
     const { logger, payload } = this.context;
     const { number, organization, repository, action, sender } = payload;
     const { owner, name } = repository;

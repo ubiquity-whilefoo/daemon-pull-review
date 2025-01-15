@@ -14,10 +14,10 @@ export const pluginSettingsSchema = T.Object(
     openRouterBaseUrl: T.String({ default: "https://openrouter.ai/api/v1" }),
     tokenLimit: T.Object(
       {
-        context: T.Number(),
-        completion: T.Number(),
+        context: T.Number({ default: 200000 }),
+        completion: T.Number({ default: 4096 }),
       },
-      { default: { context: 200000, completion: 4096 } }
+      { default: {} }
     ),
   },
   { default: {} }
