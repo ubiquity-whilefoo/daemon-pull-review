@@ -16,20 +16,18 @@
         "type": "string"
       },
       "tokenLimit": {
-        "default": {
-          "context": 200000,
-          "completion": 4096
-        },
+        "default": {},
         "type": "object",
         "properties": {
           "context": {
+            "default": 200000,
             "type": "number"
           },
           "completion": {
+            "default": 4096,
             "type": "number"
           }
-        },
-        "required": ["context", "completion"]
+        }
       }
     }
   }
