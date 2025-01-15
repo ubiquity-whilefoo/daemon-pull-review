@@ -47,7 +47,7 @@ export class PullReviewer {
     const { reviewComment, confidenceThreshold } = this.validateReviewOutput(pullReviewData.answer);
 
     if (confidenceThreshold > 0.5) {
-      await this.submitCodeReview(undefined, "COMMENT");
+      await this.submitCodeReview(undefined, "APPROVE");
     } else {
       await this.convertPullToDraft();
       await this.submitCodeReview(reviewComment, "REQUEST_CHANGES");
