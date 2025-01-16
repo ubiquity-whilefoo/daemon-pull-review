@@ -63,9 +63,9 @@ describe("Pull Reviewer tests", () => {
       const pullReviewer = new PullReviewer(createContext());
       jest.spyOn(pullReviewer, "canPerformReview").mockImplementation(async () => true);
       jest.spyOn(pullReviewer, "getTaskNumberFromPullRequest").mockImplementation(async () => 1);
-      jest.spyOn(pullReviewer, "submitCodeReview").mockImplementation(async () => {});
-
+      pullReviewer.addThumbsUpReaction = jest.fn(() => Promise.resolve());
       const result = await pullReviewer.performPullPrecheck();
+      expect(pullReviewer.addThumbsUpReaction).toHaveBeenCalled();
       expect(result).toEqual({ status: 200, reason: "Success" });
     });
   });
