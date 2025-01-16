@@ -47,13 +47,59 @@ export class PullReviewer {
     const { reviewComment, confidenceThreshold } = this.validateReviewOutput(pullReviewData.answer);
 
     if (confidenceThreshold > 0.5) {
-      await this.submitCodeReview(undefined, "APPROVE");
+      await this.addThumbsUpReaction();
     } else {
       await this.convertPullToDraft();
+      await this.removeThumbsUpReaction();
       await this.submitCodeReview(reviewComment, "REQUEST_CHANGES");
     }
 
     return { status: 200, reason: "Success" };
+  }
+
+  async addThumbsUpReaction(): Promise<void> {
+    const { logger, payload } = this.context;
+
+    try {
+      await this.context.octokit.rest.reactions.createForIssue({
+        owner: payload.repository.owner.login,
+        repo: payload.repository.name,
+        issue_number: payload.pull_request.number,
+        content: "+1",
+      });
+      logger.info("Added thumbs up reaction to pull request");
+    } catch (error) {
+      throw logger.error(`Failed to add thumbs up reaction ${error}`);
+    }
+  }
+
+  /**
+   * Remove thumbs up reaction from the pull request body if it exists
+   */
+  async removeThumbsUpReaction(): Promise<void> {
+    const { logger, payload } = this.context;
+
+    try {
+      const reactions = await this.context.octokit.rest.reactions.listForIssue({
+        owner: payload.repository.owner.login,
+        repo: payload.repository.name,
+        issue_number: payload.pull_request.number,
+      });
+
+      const botReaction = reactions.data.find((reaction) => reaction.content === "+1" && reaction.user?.type === "Bot");
+
+      if (botReaction) {
+        await this.context.octokit.rest.reactions.deleteForIssue({
+          owner: payload.repository.owner.login,
+          repo: payload.repository.name,
+          issue_number: payload.pull_request.number,
+          reaction_id: botReaction.id,
+        });
+        logger.info("Removed thumbs up reaction from pull request");
+      }
+    } catch (error) {
+      throw logger.error(`Failed to remove thumbs up reaction ${error}`);
+    }
   }
 
   /**
