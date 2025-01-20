@@ -4,26 +4,8 @@ import { createKey } from "../handlers/key";
 import { fetchIssue } from "./issue-fetching";
 import { Issue } from "../types/github-types";
 import { fetchPullRequestDiff } from "./pull-helpers/fetch-diff";
-
-export async function formatSpecAndPull(context: Context<"pull_request.opened" | "pull_request.ready_for_review">, issue: Issue): Promise<string> {
-  const tokenLimits: TokenLimits = {
-    modelMaxTokenLimit: context.adapters.openRouter.completions.getModelMaxTokenLimit(context.config.openRouterAiModel),
-    maxCompletionTokens: context.adapters.openRouter.completions.getModelMaxOutputLimit(context.config.openRouterAiModel),
-    runningTokenCount: 0,
-    tokensRemaining: 0,
-  };
-
-  // what we start out with
-  tokenLimits.tokensRemaining = tokenLimits.modelMaxTokenLimit - tokenLimits.maxCompletionTokens;
-
-  return await createPullSpecContextBlockSection({
-    context,
-    tokenLimits,
-    issue,
-  });
-}
-
-async function createPullSpecContextBlockSection({
+import { encodeAsync } from "./pull-helpers/pull-request-parsing";
+export async function createPullSpecContextBlockSection({
   context,
   tokenLimits,
   issue,
@@ -40,11 +22,6 @@ async function createPullSpecContextBlockSection({
     throw context.logger.error("Issue number is not valid");
   }
 
-  // Fetch our diff if we have one; this excludes the largest of files to keep within token limits
-  const { diff } = await fetchPullRequestDiff(context, org, repo, context.payload.pull_request.number, tokenLimits);
-  if (!diff) {
-    throw context.logger.error("Error fetching the pull difference, aborting");
-  }
   // specification or pull request body
   const specOrBody = (await fetchIssue(context, issueNumber))?.body || "No specification or body available";
 
@@ -53,8 +30,17 @@ async function createPullSpecContextBlockSection({
   const block = [specBlock.join("\n")];
 
   // Build the block with the diff in it's own section
-  const blockWithDiff = [block.join("\n"), createHeader(`Pull Request Diff`, key), diff, createFooter(`Pull Request Diff`, key)];
-  return blockWithDiff.join("\n");
+  const localContextWithoutDiff = [block.join("\n"), createHeader(`Pull Request Diff`, key), createFooter(`Pull Request Diff`, key)].join("\n");
+
+  tokenLimits.runningTokenCount += (await encodeAsync(localContextWithoutDiff)).length;
+
+  // Fetch our diff if we have one; this excludes the largest of files to keep within token limits
+  const { diff } = await fetchPullRequestDiff(context, org, repo, context.payload.pull_request.number, tokenLimits);
+  if (!diff) {
+    throw context.logger.error("Error fetching the pull difference, aborting");
+  }
+  const localContextWithDiff = [block.join("\n"), createHeader(`Pull Request Diff`, key), diff, createFooter(`Pull Request Diff`, key)];
+  return localContextWithDiff.join("\n");
 }
 
 function createHeader(content: string, repoString: string) {

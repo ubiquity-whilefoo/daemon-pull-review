@@ -1,10 +1,13 @@
-import { formatSpecAndPull } from "../helpers/format-spec-and-pull";
+import { createPullSpecContextBlockSection } from "../helpers/format-spec-and-pull";
 import { fetchIssue } from "../helpers/issue-fetching";
 import { CodeReviewStatus } from "../types/github-types";
 import { findGroundTruths } from "./ground-truths/find-ground-truths";
 import { Context } from "../types";
 import { CallbackResult } from "../types/proxy";
 import { closedByPullRequestsReferences, IssuesClosedByThisPr } from "../helpers/gql-queries";
+import { createCodeReviewSysMsg, llmQuery } from "./prompt";
+import { encodeAsync } from "../helpers/pull-helpers/pull-request-parsing";
+import { TokenLimits } from "../types/llm";
 
 export class PullReviewer {
   readonly context: Context;
@@ -220,9 +223,27 @@ export class PullReviewer {
     const taskSpecification = issue.body;
     if (!taskSpecification) throw this.context.logger.error("This task does not contain a specification and this cannot be automatically reviewed");
 
-    const formattedSpecAndPull = await formatSpecAndPull(this.context, issue);
-
     const groundTruths = await findGroundTruths(this.context, { taskSpecification });
+
+    const sysPromptTokenCount = (await encodeAsync(createCodeReviewSysMsg(groundTruths, UBIQUITY_OS_APP_NAME, ""))).length;
+    const queryTokenCount = (await encodeAsync(llmQuery)).length;
+
+    const tokenLimits: TokenLimits = {
+      modelMaxTokenLimit: this.context.adapters.openRouter.completions.getModelMaxTokenLimit(this.context.config.openRouterAiModel),
+      maxCompletionTokens: this.context.adapters.openRouter.completions.getModelMaxOutputLimit(this.context.config.openRouterAiModel),
+      runningTokenCount: 0,
+      tokensRemaining: 0,
+    };
+
+    // what we start out with to include files
+    tokenLimits.tokensRemaining = tokenLimits.modelMaxTokenLimit - tokenLimits.maxCompletionTokens - sysPromptTokenCount - queryTokenCount;
+
+    const formattedSpecAndPull = await createPullSpecContextBlockSection({
+      context: this.context,
+      tokenLimits,
+      issue,
+    });
+
     return await completions.createCompletion(
       openRouterAiModel,
       formattedSpecAndPull,

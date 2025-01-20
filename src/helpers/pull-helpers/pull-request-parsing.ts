@@ -24,17 +24,14 @@ function selectIncludedFiles(
   tokenLimits: TokenLimits,
   logger: Context["logger"]
 ): typeof files {
-  const { runningTokenCount, tokensRemaining } = tokenLimits;
-  let currentTokenCount = runningTokenCount;
   const includedFiles = [];
-
   for (const file of files) {
-    if (currentTokenCount + file.tokenCount > tokensRemaining) {
+    if (tokenLimits.runningTokenCount + file.tokenCount > tokenLimits.tokensRemaining) {
       logger.info(`Skipping ${file.filename} to stay within token limits.`);
       continue;
     }
     includedFiles.push(file);
-    currentTokenCount += file.tokenCount;
+    tokenLimits.runningTokenCount += file.tokenCount;
   }
 
   return includedFiles;
@@ -57,7 +54,7 @@ export async function processPullRequestDiff(diff: string, tokenLimits: TokenLim
 }
 
 // Helper to speed up tokenization
-async function encodeAsync(text: string, options: EncodeOptions): Promise<number[]> {
+export async function encodeAsync(text: string, options?: EncodeOptions): Promise<number[]> {
   return new Promise((resolve) => {
     const result = encode(text, options);
     resolve(result);
