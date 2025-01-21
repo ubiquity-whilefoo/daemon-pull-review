@@ -32,6 +32,7 @@ function selectIncludedFiles(
     }
     includedFiles.push(file);
     tokenLimits.runningTokenCount += file.tokenCount;
+    tokenLimits.tokensRemaining -= file.tokenCount;
   }
 
   return includedFiles;

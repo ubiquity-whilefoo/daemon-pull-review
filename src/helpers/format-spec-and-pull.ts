@@ -32,7 +32,9 @@ export async function createPullSpecContextBlockSection({
   // Build the block with the diff in it's own section
   const localContextWithoutDiff = [block.join("\n"), createHeader(`Pull Request Diff`, key), createFooter(`Pull Request Diff`, key)].join("\n");
 
-  tokenLimits.runningTokenCount += (await encodeAsync(localContextWithoutDiff)).length;
+  const tokenCount = (await encodeAsync(localContextWithoutDiff)).length;
+  tokenLimits.runningTokenCount += tokenCount;
+  tokenLimits.tokensRemaining -= tokenCount;
 
   // Fetch our diff if we have one; this excludes the largest of files to keep within token limits
   const { diff } = await fetchPullRequestDiff(context, org, repo, context.payload.pull_request.number, tokenLimits);
