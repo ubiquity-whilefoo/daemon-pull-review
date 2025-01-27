@@ -9,16 +9,12 @@ export default tsEslint.config({
     "@typescript-eslint": tsEslint.plugin,
     "check-file": checkFile,
   },
-  ignores: [".github/knip.ts"],
+  ignores: [".github/knip.ts", ".wrangler/**/*.ts", ".wrangler/**/*.js", "dist/**", "eslint.config.mjs"],
   extends: [eslint.configs.recommended, ...tsEslint.configs.recommended, sonarjs.configs.recommended],
   languageOptions: {
     parser: tsEslint.parser,
     parserOptions: {
-      projectService: {
-        defaultProject: "tsconfig.json",
-        allowDefaultProject: ["*.mjs"],
-      },
-      tsconfigRootDir: import.meta.dirname,
+      project: ["./tsconfig.json"],
     },
   },
   rules: {

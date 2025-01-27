@@ -1,4 +1,4 @@
-name: "the name of the plugin"
+name: "Claude 3.5 Sonnet Pull Request Reviewer"
 
 on:
   workflow_dispatch:
@@ -16,31 +16,24 @@ on:
       ref:
         description: "Ref"
       signature:
-        description: "The kernel signature"
+        description: "Signature sent from the Kernel"
+      command:
+        description: "Command"
 
 jobs:
   compute:
-    name: "plugin name"
+    name: "Pull review"
     runs-on: ubuntu-latest
     permissions: write-all
+    environment: ${{ github.ref == 'refs/heads/main' && 'main' || 'development' }}
     env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      KERNEL_PUBLIC_KEY: ${{ secrets.KERNEL_PUBLIC_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      UBIQUITY_OS_APP_NAME: ${{ secrets.UBIQUITY_OS_APP_NAME }}
+      PLUGIN_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: setup node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20.10.0"
-
-      - name: install dependencies
-        run: yarn
-
-      - name: execute directive
-        run: npx tsx ./src/main.ts
-        id: plugin-name
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run compute reviews
+        uses: ./
