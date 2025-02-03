@@ -13,7 +13,7 @@ export class PullReviewer {
   readonly context: Context;
   private _oneDay = 24 * 60 * 60 * 1000;
 
-  constructor(context: Context<"pull_request.opened" | "pull_request.ready_for_review">) {
+  constructor(context: Context) {
     this.context = context;
   }
 
@@ -32,7 +32,7 @@ export class PullReviewer {
       return { status: 200, reason: logger.info("PR is closed, no action required").logMessage.raw };
     } else if (!(await this.canPerformReview())) {
       return { status: 200, reason: logger.info("Cannot perform review at this time").logMessage.raw };
-    } else if (pull_request.user.id !== this.context.payload.sender.id) {
+    } else if (this.context.payload.sender && pull_request.user.id !== this.context.payload.sender.id) {
       return { status: 200, reason: logger.info("Review wasn't requested by pull author").logMessage.raw };
     } else if (pull_request.author_association === "COLLABORATOR") {
       return { status: 200, reason: logger.info("Review was requested by core team, Skipping").logMessage.raw };
@@ -115,7 +115,7 @@ export class PullReviewer {
     const { number, organization, repository, action, sender } = payload;
     const { owner, name } = repository;
 
-    logger.info(`${organization}/${repository}#${number} - ${action} - ${sender.login} - ${review}`);
+    logger.info(`${organization}/${repository}#${number} - ${action} - ${sender?.login} - ${review}`);
 
     try {
       const response = await this.context.octokit.rest.pulls.createReview({
@@ -300,7 +300,7 @@ export class PullReviewer {
       };
     }
   }
-  async getTaskNumberFromPullRequest(context: Context<"pull_request.opened" | "pull_request.ready_for_review">) {
+  async getTaskNumberFromPullRequest(context: Context) {
     const {
       payload: { pull_request },
     } = context;

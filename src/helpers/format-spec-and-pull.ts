@@ -10,7 +10,7 @@ export async function createPullSpecContextBlockSection({
   tokenLimits,
   issue,
 }: {
-  context: Context<"pull_request.ready_for_review" | "pull_request.opened">;
+  context: Context;
   tokenLimits: TokenLimits;
   issue: Issue;
 }): Promise<string> {
