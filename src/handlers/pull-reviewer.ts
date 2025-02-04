@@ -57,9 +57,10 @@ export class PullReviewer {
         await this.removeThumbsUpReaction();
         await this.submitCodeReview(reviewComment, "REQUEST_CHANGES");
       }
+      return { status: 200, reason: "Success" };
+    } else {
+      return { status: 200, reason: "Pull review data not found, Skipping automated review" };
     }
-
-    return { status: 200, reason: "Success" };
   }
 
   async addThumbsUpReaction(): Promise<void> {
