@@ -195,7 +195,7 @@ describe("Pull Reviewer tests", () => {
       closesIssues: false,
       issues: [],
     });
-    console.error(await pullReviewer.performPullPrecheck());
+
     expect(await pullReviewer.getTaskNumberFromPullRequest(context)).toBe(null);
     expect(await pullReviewer.performPullPrecheck()).toEqual({ status: 200, reason: "Pull review data not found, Skipping automated review" });
   });
