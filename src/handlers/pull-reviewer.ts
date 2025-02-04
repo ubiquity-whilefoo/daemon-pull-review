@@ -47,14 +47,16 @@ export class PullReviewer {
    */
   private async _handleCodeReview(): Promise<CallbackResult> {
     const pullReviewData = await this.reviewPull();
-    const { reviewComment, confidenceThreshold } = this.validateReviewOutput(pullReviewData.answer);
 
-    if (confidenceThreshold > 0.5) {
-      await this.addThumbsUpReaction();
-    } else {
-      await this.convertPullToDraft();
-      await this.removeThumbsUpReaction();
-      await this.submitCodeReview(reviewComment, "REQUEST_CHANGES");
+    if (pullReviewData) {
+      const { reviewComment, confidenceThreshold } = this.validateReviewOutput(pullReviewData.answer);
+      if (confidenceThreshold > 0.5) {
+        await this.addThumbsUpReaction();
+      } else {
+        await this.convertPullToDraft();
+        await this.removeThumbsUpReaction();
+        await this.submitCodeReview(reviewComment, "REQUEST_CHANGES");
+      }
     }
 
     return { status: 200, reason: "Success" };
@@ -210,8 +212,9 @@ export class PullReviewer {
     } = this.context;
 
     const taskNumber = await this.getTaskNumberFromPullRequest(this.context);
-    const issue = await fetchIssue(this.context, taskNumber);
+    if (!taskNumber) return null;
 
+    const issue = await fetchIssue(this.context, taskNumber);
     if (!issue) {
       throw this.context.logger.error(`Error fetching issue, Aborting`, {
         owner: this.context.payload.repository.owner.login,
@@ -313,8 +316,8 @@ export class PullReviewer {
     });
 
     if (closingIssues.length === 0) {
-      await this.convertPullToDraft();
-      throw this.context.logger.error("You need to link an issue before converting the pull request to ready for review.");
+      this.context.logger.info("You need to link an issue before converting the pull request to ready for review.");
+      return null;
     } else if (closingIssues.length > 1) {
       throw this.context.logger.error("Multiple tasks are linked to this pull request. This needs to be investigated to determine the best way to handle it.", {
         closingIssues,
