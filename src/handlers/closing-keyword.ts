@@ -11,21 +11,22 @@ import { PullReviewer } from "./pull-reviewer";
  */
 export async function handlePullRequestEditedEvent(context: Context<"pull_request.edited">): Promise<CallbackResult> {
   const { payload, logger } = context;
-  const closingKeywordAnyReferenceRegex = /\b(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\b\s+#\d+\b/i;
+  const issueLinkRegex =
+    /\b(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\b\s+(?:(?:[a-zA-Z0-9-]+\/[a-zA-Z0-9-]+#\d+)|(?:#\d+))(?:\s*,\s*(?:(?:(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\b\s+)?(?:[a-zA-Z0-9-]+\/[a-zA-Z0-9-]+#\d+|#\d+)))*\b/i;
 
   const newBody = payload.pull_request.body;
   if (!newBody) {
     return { status: 200, reason: "Pull request body is empty, Aborting" };
   }
-  if (!payload.changes?.body) {
+  if (!payload.changes.body?.from) {
     return { status: 200, reason: "Pull request body wasnt edited, Skipping" };
   }
 
-  const oldBody: string = payload.changes?.body?.from;
+  const oldBody: string = payload.changes.body.from;
 
   // Find matches in both the old and new bodies
-  const oldMatch = oldBody.match(closingKeywordAnyReferenceRegex);
-  const newMatch = newBody.match(closingKeywordAnyReferenceRegex);
+  const oldMatch = oldBody.match(issueLinkRegex);
+  const newMatch = newBody.match(issueLinkRegex);
 
   logger.info("Pull request body edit detected", {
     oldClosingKeyword: oldMatch ? oldMatch[0] : null,

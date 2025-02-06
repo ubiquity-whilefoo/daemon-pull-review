@@ -47,20 +47,19 @@ export class PullReviewer {
    */
   private async _handleCodeReview(): Promise<CallbackResult> {
     const pullReviewData = await this.reviewPull();
-
-    if (pullReviewData) {
-      const { reviewComment, confidenceThreshold } = this.validateReviewOutput(pullReviewData.answer);
-      if (confidenceThreshold > 0.5) {
-        await this.addThumbsUpReaction();
-      } else {
-        await this.convertPullToDraft();
-        await this.removeThumbsUpReaction();
-        await this.submitCodeReview(reviewComment, "REQUEST_CHANGES");
-      }
-      return { status: 200, reason: "Success" };
-    } else {
+    if (!pullReviewData) {
       return { status: 200, reason: "Pull review data not found, Skipping automated review" };
     }
+
+    const { reviewComment, confidenceThreshold } = this.validateReviewOutput(pullReviewData.answer);
+    if (confidenceThreshold > 0.5) {
+      await this.addThumbsUpReaction();
+    } else {
+      await this.convertPullToDraft();
+      await this.removeThumbsUpReaction();
+      await this.submitCodeReview(reviewComment, "REQUEST_CHANGES");
+    }
+    return { status: 200, reason: "Success" };
   }
 
   async addThumbsUpReaction(): Promise<void> {
