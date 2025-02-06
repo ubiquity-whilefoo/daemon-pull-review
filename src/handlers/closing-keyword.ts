@@ -11,8 +11,6 @@ import { PullReviewer } from "./pull-reviewer";
  */
 export async function handlePullRequestEditedEvent(context: Context<"pull_request.edited">): Promise<CallbackResult> {
   const { payload, logger } = context;
-  const issueLinkRegex =
-    /\b(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\b\s+(?:(?:[a-zA-Z0-9-]+\/[a-zA-Z0-9-]+#\d+)|(?:#\d+))(?:\s*,\s*(?:(?:(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\b\s+)?(?:[a-zA-Z0-9-]+\/[a-zA-Z0-9-]+#\d+|#\d+)))*\b/i;
 
   const newBody = payload.pull_request.body;
   if (!newBody) {
@@ -25,18 +23,41 @@ export async function handlePullRequestEditedEvent(context: Context<"pull_reques
   const oldBody: string = payload.changes.body.from;
 
   // Find matches in both the old and new bodies
-  const oldMatch = oldBody.match(issueLinkRegex);
-  const newMatch = newBody.match(issueLinkRegex);
+  const oldMatch = extractIssueUrls(oldBody, context.payload.repository.full_name);
+  const newMatch = extractIssueUrls(newBody, context.payload.repository.full_name);
 
   logger.info("Pull request body edit detected", {
     oldClosingKeyword: oldMatch ? oldMatch[0] : null,
     newClosingKeyword: newMatch ? newMatch[0] : null,
   });
 
-  if (newMatch && !oldMatch) {
+  if (newMatch.length !== oldMatch.length || newMatch.some((url) => !oldMatch.includes(url))) {
     const pullReviewer = new PullReviewer(context);
     return await pullReviewer.performPullPrecheck();
   }
-
   return { status: 200, reason: "No new closing keyword with an issue reference detected in the PR body edit" };
+}
+
+function extractIssueUrls(pullBody: string, defaultRepo: string) {
+  const pattern =
+    /(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s+(?:(https:\/\/github\.com\/([^/]+\/[^/]+)\/issues\/(\d+))|([^/\s]+\/[^#\s]+)#(\d+)|#(\d+))/gi;
+  const matches = pullBody.matchAll(pattern);
+  const issueUrls = [];
+
+  for (const match of matches) {
+    const fullUrl = match[1];
+    const repoPath = match[4];
+    const issueNum1 = match[5];
+    const issueNum2 = match[6];
+
+    if (fullUrl) {
+      issueUrls.push(fullUrl);
+    } else if (repoPath) {
+      issueUrls.push(`https://github.com/${repoPath}/issues/${issueNum1}`);
+    } else {
+      issueUrls.push(`https://github.com/${defaultRepo}/issues/${issueNum2}`);
+    }
+  }
+
+  return issueUrls.sort();
 }
