@@ -15,7 +15,7 @@ With its huge context window, we are able to feed the entire issue specification
 ### Core System Design
 - **Cloudflare Worker-based Service**: Implements a serverless architecture running on Cloudflare's edge network
 - **GitHub App Integration**: Processes webhooks and interacts with GitHub's API for pull request management
-- **OpenRouter Integration**: Provides access to Claude 3.5 Sonnet model through OpenRouter's API
+- **OpenRouter Integration**: Provides access to LLMs through OpenRouter's API
 - **TypeScript Implementation**: Ensures type safety and better code maintainability
 
 ### Key Components
