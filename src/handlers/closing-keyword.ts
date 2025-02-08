@@ -26,23 +26,22 @@ export async function handlePullRequestEditedEvent(context: Context<"pull_reques
   const oldMatch = extractIssueUrls(oldBody, context.payload.repository.full_name);
   const newMatch = extractIssueUrls(newBody, context.payload.repository.full_name);
 
-  logger.info("Pull request body edit detected", {
-    oldClosingKeyword: oldMatch ? oldMatch[0] : null,
-    newClosingKeyword: newMatch ? newMatch[0] : null,
-  });
-
-  if (newMatch.length !== oldMatch.length || newMatch.some((url) => !oldMatch.includes(url))) {
+  if ((newMatch.size !== 0 && newMatch.size !== oldMatch.size) || [...newMatch].some((url) => !oldMatch.has(url))) {
+    logger.info("Pull request body edit detected", {
+      oldLinkedIssues: oldMatch,
+      newLinkedIssues: newMatch,
+    });
     const pullReviewer = new PullReviewer(context);
     return await pullReviewer.performPullPrecheck();
   }
   return { status: 200, reason: "No new closing keyword with an issue reference detected in the PR body edit" };
 }
 
-function extractIssueUrls(pullBody: string, defaultRepo: string) {
+function extractIssueUrls(pullBody: string, defaultRepo: string): Set<string> {
   const pattern =
     /(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s+(?:(https:\/\/github\.com\/([^/]+\/[^/]+)\/issues\/(\d+))|([^/\s]+\/[^#\s]+)#(\d+)|#(\d+))/gi;
   const matches = pullBody.matchAll(pattern);
-  const issueUrls = [];
+  const issueUrls = new Set<string>();
 
   for (const match of matches) {
     const fullUrl = match[1];
@@ -51,13 +50,13 @@ function extractIssueUrls(pullBody: string, defaultRepo: string) {
     const issueNum2 = match[6];
 
     if (fullUrl) {
-      issueUrls.push(fullUrl);
+      issueUrls.add(fullUrl);
     } else if (repoPath) {
-      issueUrls.push(`https://github.com/${repoPath}/issues/${issueNum1}`);
+      issueUrls.add(`https://github.com/${repoPath}/issues/${issueNum1}`);
     } else {
-      issueUrls.push(`https://github.com/${defaultRepo}/issues/${issueNum2}`);
+      issueUrls.add(`https://github.com/${defaultRepo}/issues/${issueNum2}`);
     }
   }
 
-  return issueUrls.sort();
+  return issueUrls;
 }
