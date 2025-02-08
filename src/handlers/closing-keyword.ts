@@ -37,7 +37,7 @@ export async function handlePullRequestEditedEvent(context: Context<"pull_reques
   return { status: 200, reason: "No new closing keyword with an issue reference detected in the PR body edit" };
 }
 
-function extractIssueUrls(pullBody: string, defaultRepo: string): Set<string> {
+export function extractIssueUrls(pullBody: string, defaultRepo: string): Set<string> {
   const pattern =
     /(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s+(?:(https:\/\/github\.com\/([^/]+\/[^/]+)\/issues\/(\d+))|([^/\s]+\/[^#\s]+)#(\d+)|#(\d+))/gi;
   const matches = pullBody.matchAll(pattern);
