@@ -1,3 +1,4 @@
+import { getLinkedIssues } from "../helpers/gql-queries";
 import { Context } from "../types";
 import { CallbackResult } from "../types/proxy";
 import { PullReviewer } from "./pull-reviewer";
@@ -23,13 +24,13 @@ export async function handlePullRequestEditedEvent(context: Context<"pull_reques
   const oldBody: string = payload.changes.body.from;
 
   // Find matches in both the old and new bodies
-  const oldMatch = extractIssueUrls(oldBody, context.payload.repository.full_name);
-  const newMatch = extractIssueUrls(newBody, context.payload.repository.full_name);
+  const oldLinkedIssues = extractIssueUrls(oldBody, context.payload.repository.full_name);
+  const newLinkedIssues = new Set((await getLinkedIssues(context)).map((issue) => issue.url));
 
-  if ((newMatch.size !== 0 && newMatch.size !== oldMatch.size) || [...newMatch].some((url) => !oldMatch.has(url))) {
+  if ((newLinkedIssues.size !== 0 && newLinkedIssues.size !== oldLinkedIssues.size) || [...newLinkedIssues].some((url) => !oldLinkedIssues.has(url))) {
     logger.info("Pull request body edit detected", {
-      oldLinkedIssues: oldMatch,
-      newLinkedIssues: newMatch,
+      oldLinkedIssues: oldLinkedIssues,
+      newLinkedIssues: newLinkedIssues,
     });
     const pullReviewer = new PullReviewer(context);
     return await pullReviewer.performPullPrecheck();
@@ -38,9 +39,11 @@ export async function handlePullRequestEditedEvent(context: Context<"pull_reques
 }
 
 export function extractIssueUrls(pullBody: string, defaultRepo: string): Set<string> {
+  const bodyWithoutComments = pullBody.replace(/<!--[\s\S]*?-->/g, "");
+
   const pattern =
     /(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s+(?:(https:\/\/github\.com\/([^/]+\/[^/]+)\/issues\/(\d+))|([^/\s]+\/[^#\s]+)#(\d+)|#(\d+))/gi;
-  const matches = pullBody.matchAll(pattern);
+  const matches = bodyWithoutComments.matchAll(pattern);
   const issueUrls = new Set<string>();
 
   for (const match of matches) {
