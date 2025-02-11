@@ -15,23 +15,6 @@ export type IssuesClosedByThisPr = {
   };
 };
 
-type LinkedIssue = {
-  number: number;
-  title: string;
-  state: string;
-  url: string;
-};
-
-type QueryResponse = {
-  repository: {
-    pullRequest: {
-      closingIssuesReferences: {
-        nodes: LinkedIssue[];
-      };
-    };
-  };
-};
-
 export const closedByPullRequestsReferences = /* GraphQL */ `
   query closingIssuesReferencesQuery($owner: String!, $repo: String!, $pr_number: Int!) {
     repository(owner: $owner, name: $repo) {
@@ -57,31 +40,14 @@ export const closedByPullRequestsReferences = /* GraphQL */ `
   }
 `;
 
-export const linkedIssuesOnPullRequestReferences = /* GraphQL */ `
-  query ($owner: String!, $repo: String!, $prNumber: Int!) {
-    repository(owner: $owner, name: $repo) {
-      pullRequest(number: $prNumber) {
-        closingIssuesReferences(first: 100) {
-          nodes {
-            number
-            title
-            state
-            url
-          }
-        }
-      }
-    }
-  }
-`;
-
 export async function getLinkedIssues(context: Context) {
   const prNumber = context.payload.pull_request.number;
 
-  const response = await context.octokit.graphql<QueryResponse>(linkedIssuesOnPullRequestReferences, {
+  const response = await context.octokit.graphql<IssuesClosedByThisPr>(closedByPullRequestsReferences, {
     owner: context.payload.repository.owner.login,
     repo: context.payload.repository.name,
     prNumber,
   });
 
-  return response.repository.pullRequest.closingIssuesReferences.nodes;
+  return response.repository.pullRequest.closingIssuesReferences.edges;
 }
