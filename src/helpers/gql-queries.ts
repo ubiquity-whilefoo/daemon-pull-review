@@ -46,8 +46,7 @@ export async function getLinkedIssues(context: Context) {
   const response = await context.octokit.graphql<IssuesClosedByThisPr>(closedByPullRequestsReferences, {
     owner: context.payload.repository.owner.login,
     repo: context.payload.repository.name,
-    prNumber,
+    pr_number: prNumber,
   });
-
   return response.repository.pullRequest.closingIssuesReferences.edges;
 }
