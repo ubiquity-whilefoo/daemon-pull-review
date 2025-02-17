@@ -1,6 +1,6 @@
 import { createPullSpecContextBlockSection } from "../helpers/format-spec-and-pull";
 import { fetchIssue } from "../helpers/issue-fetching";
-import { CodeReviewStatus } from "../types/github-types";
+import { CodeReviewStatus, Issue } from "../types/github-types";
 import { findGroundTruths } from "./ground-truths/find-ground-truths";
 import { Context } from "../types";
 import { CallbackResult } from "../types/proxy";
@@ -211,22 +211,32 @@ export class PullReviewer {
       },
     } = this.context;
 
-    const taskNumber = await this.getTaskNumberFromPullRequest(this.context);
-    if (!taskNumber) return null;
+    const taskNumbers = await this.getTaskNumberFromPullRequest(this.context);
+    if (!taskNumbers) return null;
 
-    const issue = await fetchIssue(this.context, taskNumber);
-    if (!issue) {
+    const issues = (await Promise.all(
+      taskNumbers.map(async (taskNumber) => {
+        return await fetchIssue(this.context, taskNumber);
+      })
+    )) as Issue[];
+
+    if (issues.some((issue) => !issue) || !issues) {
       throw this.context.logger.error(`Error fetching issue, Aborting`, {
         owner: this.context.payload.repository.owner.login,
         repo: this.context.payload.repository.name,
-        issue_number: taskNumber,
+        issue_number: taskNumbers,
       });
     }
 
-    const taskSpecification = issue.body;
-    if (!taskSpecification) throw this.context.logger.error("This task does not contain a specification and this cannot be automatically reviewed");
+    const taskSpecifications: string[] = [];
+    issues.forEach((issue) => {
+      if (!issue?.body) {
+        throw this.context.logger.error(`Task #${issue?.number} does not contain a specification and this cannot be automatically reviewed`);
+      }
+      taskSpecifications.push(issue.body);
+    });
 
-    const groundTruths = await findGroundTruths(this.context, { taskSpecification });
+    const groundTruths = await findGroundTruths(this.context, { taskSpecifications });
 
     const sysPromptTokenCount = (await encodeAsync(createCodeReviewSysMsg(groundTruths, UBIQUITY_OS_APP_NAME, ""))).length;
     const queryTokenCount = (await encodeAsync(llmQuery)).length;
@@ -244,7 +254,7 @@ export class PullReviewer {
     const formattedSpecAndPull = await createPullSpecContextBlockSection({
       context: this.context,
       tokenLimits,
-      issue,
+      issues,
     });
 
     return await completions.createCompletion(
@@ -307,7 +317,6 @@ export class PullReviewer {
     const {
       payload: { pull_request },
     } = context;
-    let issueNumber;
 
     const { issues: closingIssues } = await this.checkIfPrClosesIssues(context.octokit, {
       owner: pull_request.base.repo.owner.login,
@@ -318,20 +327,13 @@ export class PullReviewer {
     if (closingIssues.length === 0) {
       this.context.logger.info("You need to link an issue before converting the pull request to ready for review.");
       return null;
-    } else if (closingIssues.length > 1) {
-      throw this.context.logger.error("Multiple tasks are linked to this pull request. This needs to be investigated to determine the best way to handle it.", {
-        closingIssues,
-        pull_request,
-      });
-    } else {
-      issueNumber = closingIssues[0].number;
     }
 
-    if (!issueNumber) {
+    if (!closingIssues.every((issue) => issue.number)) {
       throw this.context.logger.error("Task number not found", { pull_request });
     }
 
-    return issueNumber;
+    return closingIssues.map((issue) => issue.number);
   }
 
   validateReviewOutput(reviewString: string) {
