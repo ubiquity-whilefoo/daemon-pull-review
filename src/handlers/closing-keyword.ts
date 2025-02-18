@@ -18,7 +18,7 @@ export async function handlePullRequestEditedEvent(context: Context<"pull_reques
     return { status: 200, reason: "Pull request body is empty, Aborting" };
   }
   if (!payload.changes.body?.from) {
-    return { status: 200, reason: "Pull request body wasnt edited, Skipping" };
+    return { status: 200, reason: "Pull request body wasn't edited, Skipping" };
   }
 
   const oldBody: string = payload.changes.body.from;

@@ -4,7 +4,6 @@ on:
   push:
   pull_request:
 
-
 jobs:
   format-check:
     name: Check for formatting errors
