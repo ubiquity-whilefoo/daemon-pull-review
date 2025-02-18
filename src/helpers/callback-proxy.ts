@@ -13,6 +13,7 @@ import { CallbackResult, ProxyCallbacks } from "../types/proxy";
 const callbacks = {
   "pull_request.opened": [(context: Context) => new PullReviewer(context).performPullPrecheck()],
   "pull_request.ready_for_review": [(context: Context) => new PullReviewer(context).performPullPrecheck()],
+  "pull_request.reopened": [(context: Context) => new PullReviewer(context).performPullPrecheck()],
   "pull_request.edited": [(context: Context<"pull_request.edited">) => handlePullRequestEditedEvent(context)],
 } as ProxyCallbacks;
 
