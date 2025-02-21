@@ -11,10 +11,13 @@ import { TokenLimits } from "../types/llm";
 
 export class PullReviewer {
   readonly context: Context;
-  private _oneDay = 24 * 60 * 60 * 1000;
+  private reviewInterval = 24 * 60 * 60 * 1000;
 
   constructor(context: Context<"pull_request.opened" | "pull_request.ready_for_review">) {
     this.context = context;
+    if (context.config.reviewInterval) {
+      this.reviewInterval = context.config.reviewInterval;
+    }
   }
 
   /**
@@ -162,7 +165,7 @@ export class PullReviewer {
     const now = new Date();
     const diff = now.getTime() - lastReviewDate.getTime();
 
-    if (diff < this._oneDay) {
+    if (diff < this.reviewInterval) {
       await this.convertPullToDraft();
       throw this.context.logger.error("Only one review per day is allowed");
     }
