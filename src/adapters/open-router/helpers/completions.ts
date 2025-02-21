@@ -77,7 +77,7 @@ export class OpenRouterCompletion extends SuperOpenRouter {
     };
   }
 
-  async createGroundTruthCompletion(context: Context, groundTruthSource: string, systemMsg: string): Promise<string | null> {
+  async createGroundTruthCompletion(context: Context, groundTruthSource: string[], systemMsg: string): Promise<string | null> {
     const {
       config: { openRouterAiModel },
     } = context;
@@ -92,7 +92,7 @@ export class OpenRouterCompletion extends SuperOpenRouter {
         },
         {
           role: "user",
-          content: groundTruthSource,
+          content: groundTruthSource.join("\n"),
         },
       ],
     })) as OpenAI.Chat.Completions.ChatCompletion & {
