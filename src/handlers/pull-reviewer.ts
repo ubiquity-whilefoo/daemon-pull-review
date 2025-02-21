@@ -211,27 +211,10 @@ export class PullReviewer {
       },
     } = this.context;
 
-    const tasks = await this.getTasksFromPullRequest(this.context);
-    if (!tasks) return null;
-
-    const issues = (await Promise.all(
-      tasks.map(async (task) => {
-        const taskNumber = task.number;
-        const taskRepo = task.repository.name;
-        const taskOwner = task.repository.owner;
-        return await fetchIssue(this.context, taskNumber, taskRepo, taskOwner);
-      })
-    )) as Issue[];
-
-    if (issues.some((issue) => !issue) || !issues) {
-      throw this.context.logger.error(`Error fetching issue, Aborting`, {
-        owner: this.context.payload.repository.owner.login,
-        repo: this.context.payload.repository.name,
-        issues: tasks.map((task) => task.url),
-      });
-    }
-
     const taskSpecifications: string[] = [];
+    const issues = await this.getTasksFromPullRequest(this.context);
+    if (!issues) return null;
+
     issues.forEach((issue) => {
       if (!issue?.body) {
         throw this.context.logger.error(`Task #${issue?.number} does not contain a specification and this cannot be automatically reviewed`);
@@ -336,7 +319,24 @@ export class PullReviewer {
       throw this.context.logger.error("Task number not found", { pull_request });
     }
 
-    return closingIssues;
+    const issues = (await Promise.all(
+      closingIssues.map(async (issue) => {
+        const issueNumber = issue.number;
+        const issueRepo = issue.repository.name;
+        const issueOwner = issue.repository.owner;
+        return await fetchIssue(this.context, issueNumber, issueOwner, issueRepo);
+      })
+    )) as Issue[];
+
+    if (issues.some((issue) => !issue) || !issues) {
+      throw this.context.logger.error(`Error fetching issue, Aborting`, {
+        owner: this.context.payload.repository.owner.login,
+        repo: this.context.payload.repository.name,
+        issues: issues.map((issue) => issue.url),
+      });
+    }
+
+    return issues;
   }
 
   validateReviewOutput(reviewString: string) {
