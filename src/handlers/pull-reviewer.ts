@@ -211,12 +211,15 @@ export class PullReviewer {
       },
     } = this.context;
 
-    const taskNumbers = await this.getTaskNumberFromPullRequest(this.context);
-    if (!taskNumbers) return null;
+    const tasks = await this.getTasksFromPullRequest(this.context);
+    if (!tasks) return null;
 
     const issues = (await Promise.all(
-      taskNumbers.map(async (taskNumber) => {
-        return await fetchIssue(this.context, taskNumber);
+      tasks.map(async (task) => {
+        const taskNumber = task.number;
+        const taskRepo = task.repository.name;
+        const taskOwner = task.repository.owner;
+        return await fetchIssue(this.context, taskNumber, taskRepo, taskOwner);
       })
     )) as Issue[];
 
@@ -224,7 +227,7 @@ export class PullReviewer {
       throw this.context.logger.error(`Error fetching issue, Aborting`, {
         owner: this.context.payload.repository.owner.login,
         repo: this.context.payload.repository.name,
-        issue_number: taskNumbers,
+        issues: tasks.map((task) => task.url),
       });
     }
 
@@ -313,7 +316,7 @@ export class PullReviewer {
       };
     }
   }
-  async getTaskNumberFromPullRequest(context: Context) {
+  async getTasksFromPullRequest(context: Context) {
     const {
       payload: { pull_request },
     } = context;
@@ -333,7 +336,7 @@ export class PullReviewer {
       throw this.context.logger.error("Task number not found", { pull_request });
     }
 
-    return closingIssues.map((issue) => issue.number);
+    return closingIssues;
   }
 
   validateReviewOutput(reviewString: string) {
