@@ -28,6 +28,10 @@
             "type": "number"
           }
         }
+      },
+      "reviewInterval": {
+        "default": "1 Day",
+        "type": "string"
       }
     }
   }
