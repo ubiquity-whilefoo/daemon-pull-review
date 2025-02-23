@@ -10,8 +10,16 @@ import ms from "ms";
 
 export const pluginSettingsSchema = T.Object(
   {
-    openRouterAiModel: T.String({ default: "anthropic/claude-3.5-sonnet", description: "The model to use for OpenRouter AI", examples: ["anthropic/claude-3.5-sonnet"] }),
-    openRouterBaseUrl: T.String({ default: "https://openrouter.ai/api/v1", description: "The base URL for OpenRouter AI", examples: ["https://openrouter.ai/api/v1"] }),
+    openRouterAiModel: T.String({
+      default: "anthropic/claude-3.5-sonnet",
+      description: "The model to use for OpenRouter AI",
+      examples: ["anthropic/claude-3.5-sonnet"],
+    }),
+    openRouterBaseUrl: T.String({
+      default: "https://openrouter.ai/api/v1",
+      description: "The base URL for OpenRouter AI",
+      examples: ["https://openrouter.ai/api/v1"],
+    }),
     tokenLimit: T.Object(
       {
         context: T.Number({ default: 200000 }),
@@ -19,7 +27,9 @@ export const pluginSettingsSchema = T.Object(
       },
       { default: {}, description: "The token limits for LLM context and completion", examples: [{ context: 200000, completion: 4096 }] }
     ),
-    reviewInterval: T.Transform(T.Optional(T.String({ default: "1 Day", description: "How often a review can be performed. Omit for no limit", examples: ["1 Day", "1 Hour", "1 Week"] })),)
+    reviewInterval: T.Transform(
+      T.Optional(T.String({ default: "1 Day", description: "How often a review can be performed. Omit for no limit", examples: ["1 Day", "1 Hour", "1 Week"] }))
+    )
       .Decode((v: string) => {
         try {
           const val = ms(v as unknown as number, { long: false }) as unknown as number;
