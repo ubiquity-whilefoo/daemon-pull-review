@@ -10,7 +10,6 @@ import { Octokit } from "@octokit/rest";
 import { CompletionsType } from "../src/adapters/open-router/helpers/completions";
 import pullTemplate from "./__mocks__/pull-template";
 import { Logs } from "@ubiquity-os/ubiquity-os-logger";
-// @ts-expect-error - no types available
 import ms from "ms";
 // Mock constants
 const MOCK_ANSWER_PASSED = `{"confidenceThreshold": 1, "reviewComment": "passed"}`;

@@ -1,5 +1,4 @@
 import { StaticDecode, Type as T } from "@sinclair/typebox";
-// @ts-expect-error - no types available
 import ms from "ms";
 /**
  * This should contain the properties of the bot config
@@ -23,7 +22,7 @@ export const pluginSettingsSchema = T.Object(
     reviewInterval: T.Transform(T.Optional(T.String({ default: "1 Day" })))
       .Decode((v: string) => {
         try {
-          const val: number = ms(v, { long: false });
+          const val = ms(v as unknown as number, { long: false }) as unknown as number;
           if (!val || isNaN(Number(val))) throw new Error("Invalid value");
           return val;
         } catch {

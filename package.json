@@ -29,6 +29,7 @@
   "dependencies": {
     "@octokit/graphql-schema": "^15.25.0",
     "@sinclair/typebox": "0.34.3",
+    "@types/ms": "^2.1.0",
     "@ubiquity-os/plugin-sdk": "^3.0.0",
     "@ubiquity-os/ubiquity-os-logger": "^1.4.0",
     "dotenv": "^16.4.5",

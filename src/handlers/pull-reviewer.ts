@@ -8,7 +8,6 @@ import { closedByPullRequestsReferences, IssuesClosedByThisPr } from "../helpers
 import { createCodeReviewSysMsg, llmQuery } from "./prompt";
 import { encodeAsync } from "../helpers/pull-helpers/pull-request-parsing";
 import { TokenLimits } from "../types/llm";
-// @ts-expect-error - no types available
 import ms from "ms";
 
 export class PullReviewer {
