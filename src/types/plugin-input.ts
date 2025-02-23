@@ -26,7 +26,7 @@ export const pluginSettingsSchema = T.Object(
           const val: number = ms(v, { long: false });
           if (!val || isNaN(Number(val))) throw new Error("Invalid value");
           return val;
-        } catch (er) {
+        } catch {
           if (v.includes("push")) return null;
         }
       })

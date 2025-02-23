@@ -13,12 +13,12 @@ import ms from "ms";
 
 export class PullReviewer {
   readonly context: Context;
-  private reviewInterval: number | null = null;
+  private _reviewInterval: number | null = null;
 
   constructor(context: Context) {
     this.context = context;
     if (context.config.reviewInterval) {
-      this.reviewInterval = context.config.reviewInterval;
+      this._reviewInterval = context.config.reviewInterval;
     }
   }
 
@@ -169,7 +169,7 @@ export class PullReviewer {
     const now = new Date();
     const diff = now.getTime() - lastReviewDate.getTime();
 
-    if (this.reviewInterval && diff < this.reviewInterval) {
+    if (this._reviewInterval && diff < this._reviewInterval) {
       await this.convertPullToDraft();
       throw this.context.logger.error(`Review interval not met, skipping review. Last review was ${ms(diff, { long: true })} ago`);
     }
