@@ -171,10 +171,10 @@ export class PullReviewer {
 
     if (this.reviewInterval && diff < this.reviewInterval) {
       await this.convertPullToDraft();
-      throw this.context.logger.error(`Review interval not met, skipping review. Last review was ${ms(diff)} ago`);
+      throw this.context.logger.error(`Review interval not met, skipping review. Last review was ${ms(diff, { long: true })} ago`);
     }
 
-    logger.info(`Review interval met, proceeding with review. Last review was ${ms(diff)} ago`);
+    logger.info(`Review interval met, proceeding with review. Last review was ${ms(diff, { long: true })} ago`);
     return true;
   }
 
