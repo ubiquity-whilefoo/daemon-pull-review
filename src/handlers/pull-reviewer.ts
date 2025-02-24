@@ -324,12 +324,12 @@ export class PullReviewer {
         const issueNumber = issue.number;
         const issueRepo = issue.repository.name;
         const issueOwner = issue.repository.owner;
-        return await fetchIssue(this.context, issueNumber, issueOwner, issueRepo);
+        return fetchIssue(this.context, issueNumber, issueOwner, issueRepo);
       })
     )) as Issue[];
 
     if (issues.some((issue) => !issue) || !issues) {
-      throw this.context.logger.error(`Error fetching issue, Aborting`, {
+      throw this.context.logger.error(`Error fetching issue, aborting`, {
         owner: this.context.payload.repository.owner.login,
         repo: this.context.payload.repository.name,
         issues: issues.map((issue) => issue.url),

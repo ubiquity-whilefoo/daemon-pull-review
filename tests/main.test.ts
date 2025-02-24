@@ -3,6 +3,7 @@ import { server } from "./__mocks__/node";
 import usersGet from "./__mocks__/users-get.json";
 import { describe, beforeAll, beforeEach, afterAll, afterEach, it, jest, expect } from "@jest/globals";
 import { Context, SupportedEvents } from "../src/types";
+import { Issue } from "../src/types/github-types";
 import { drop } from "@mswjs/data";
 import issueTemplate from "./__mocks__/issue-template";
 import repoTemplate from "./__mocks__/repo-template";
@@ -10,7 +11,6 @@ import { Octokit } from "@octokit/rest";
 import { CompletionsType } from "../src/adapters/open-router/helpers/completions";
 import pullTemplate from "./__mocks__/pull-template";
 import { Logs } from "@ubiquity-os/ubiquity-os-logger";
-import { Issue } from "../src/types/github-types";
 
 // Mock constants
 const MOCK_ANSWER_PASSED = `{"confidenceThreshold": 1, "reviewComment": "passed"}`;
