@@ -3,6 +3,7 @@ import { server } from "./__mocks__/node";
 import usersGet from "./__mocks__/users-get.json";
 import { describe, beforeAll, beforeEach, afterAll, afterEach, it, jest, expect } from "@jest/globals";
 import { Context, SupportedEvents } from "../src/types";
+import { Issue } from "../src/types/github-types";
 import { drop } from "@mswjs/data";
 import issueTemplate from "./__mocks__/issue-template";
 import repoTemplate from "./__mocks__/repo-template";
@@ -61,8 +62,18 @@ describe("Pull Reviewer tests", () => {
     it("should handle successful review", async () => {
       const { PullReviewer } = await import("../src/handlers/pull-reviewer");
       const pullReviewer = new PullReviewer(createContext());
+
       jest.spyOn(pullReviewer, "canPerformReview").mockImplementation(async () => true);
-      jest.spyOn(pullReviewer, "getTaskNumberFromPullRequest").mockImplementation(async () => [1]);
+      jest.spyOn(pullReviewer, "getTasksFromPullRequest").mockImplementation(
+        async () =>
+          [
+            {
+              body: "Resolves #3",
+              html_url: "https://github.com/ubiquity/test-repo/issue/1",
+            },
+          ] as unknown as Issue[]
+      );
+
       pullReviewer.addThumbsUpReaction = jest.fn(() => Promise.resolve());
       const result = await pullReviewer.performPullPrecheck();
       expect(pullReviewer.addThumbsUpReaction).toHaveBeenCalled();
@@ -196,7 +207,7 @@ describe("Pull Reviewer tests", () => {
       issues: [],
     });
 
-    expect(await pullReviewer.getTaskNumberFromPullRequest(context)).toBe(null);
+    expect(await pullReviewer.getTasksFromPullRequest(context)).toBe(null);
     expect(await pullReviewer.performPullPrecheck()).toEqual({ status: 200, reason: "Pull review data not found, Skipping automated review" });
   });
 });
