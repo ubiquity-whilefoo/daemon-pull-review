@@ -1,12 +1,5 @@
 import { StaticDecode, Type as T } from "@sinclair/typebox";
-import ms from "ms";
-/**
- * This should contain the properties of the bot config
- * that are required for the plugin to function.
- *
- * The kernel will extract those and pass them to the plugin,
- * which are built into the context object from setup().
- */
+import ms, { StringValue } from "ms";
 
 export const pluginSettingsSchema = T.Object(
   {
@@ -30,13 +23,14 @@ export const pluginSettingsSchema = T.Object(
     reviewInterval: T.Transform(
       T.Optional(T.String({ default: "1 Day", description: "How often a review can be performed. Omit for no limit", examples: ["1 Day", "1 Hour", "1 Week"] }))
     )
-      .Decode((v: string) => {
+      .Decode((v?: string) => {
+        if (!v || v?.includes("push")) return null;
         try {
-          const val = ms(v as unknown as number, { long: false }) as unknown as number;
+          const val = ms(v as StringValue);
           if (!val || isNaN(Number(val))) throw new Error("Invalid value");
           return val;
         } catch {
-          if (v.includes("push")) return null;
+          throw new Error("Invalid review interval value. Must be a valid time string or 'push'");
         }
       })
       .Encode((v) => {
