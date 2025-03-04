@@ -41,11 +41,19 @@
         }
       },
       "reviewInterval": {
-        "default": "1 Day",
-        "description": "How often a review can be performed. Omit for no limit",
-        "examples": ["1 Day", "1 Hour", "1 Week"],
-        "type": "string"
+        "anyOf": [
+          {
+            "type": "undefined"
+          },
+          {
+            "default": "1 Day",
+            "description": "How often a review can be performed. Omit for no limit",
+            "examples": ["1 Day", "1 Hour", "1 Week"],
+            "type": "string"
+          }
+        ]
       }
-    }
+    },
+    "required": ["reviewInterval"]
   }
 }
