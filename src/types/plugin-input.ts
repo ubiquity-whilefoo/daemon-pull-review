@@ -21,20 +21,23 @@ export const pluginSettingsSchema = T.Object(
       { default: {}, description: "The token limits for LLM context and completion", examples: [{ context: 200000, completion: 4096 }] }
     ),
     reviewInterval: T.Transform(
-      T.Optional(T.String({ default: "1 Day", description: "How often a review can be performed. Omit for no limit", examples: ["1 Day", "1 Hour", "1 Week"] }))
+      T.Union([
+        T.Undefined(),
+        T.String({ default: "1 Day", description: "How often a review can be performed. Omit for no limit", examples: ["1 Day", "1 Hour", "1 Week"] }),
+      ])
     )
       .Decode((v?: string) => {
-        if (!v || v?.includes("push")) return null;
+        if (!v) return;
         try {
           const val = ms(v as StringValue);
           if (!val || isNaN(Number(val))) throw new Error("Invalid value");
           return val;
         } catch {
-          throw new Error("Invalid review interval value. Must be a valid time string or 'push'");
+          throw new Error("Invalid review interval value. Must be a valid time string.");
         }
       })
       .Encode((v) => {
-        if (!v) return "push";
+        if (!v) return;
         return ms(v, { long: true });
       }),
   },
