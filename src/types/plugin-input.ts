@@ -21,9 +21,7 @@ export const pluginSettingsSchema = T.Object(
       { default: {}, description: "The token limits for LLM context and completion", examples: [{ context: 200000, completion: 4096 }] }
     ),
     reviewInterval: T.Transform(
-      T.Optional(
-        T.String({ default: "1 Day", description: "How often a review can be performed. Omit for no limit", examples: ["1 Day", "1 Hour", "1 Week"] }),
-      )
+      T.Optional(T.String({ default: "1 Day", description: "How often a review can be performed. Omit for no limit", examples: ["1 Day", "1 Hour", "1 Week"] }))
     )
       .Decode((v?: string) => {
         if (!v) return;
