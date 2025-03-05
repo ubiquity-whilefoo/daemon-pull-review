@@ -11,6 +11,7 @@ describe("pluginSettingsSchema", () => {
         context: 200000,
         completion: 4096,
       },
+      reviewInterval: "1 Day",
     });
   });
 });
