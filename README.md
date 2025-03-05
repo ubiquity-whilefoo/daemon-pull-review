@@ -61,6 +61,7 @@ plugins:
           openRouterAiModel: "" # Optional - defaults to "anthropic/claude-3.5-sonnet"
           openRouterBaseUrl: "" # Optional - defaults to Open Router's API endpoint
           tokenLimit: { context: 200000, output: 4096 } #  # Required if using custom openRouterAiModel. Defaults to Claude 3.5 Sonnet limits
+          reviewInterval: "1 Hour" # Optional - defaults to no interval (review on every `ready_for_review` event)
 ```
 
 Important:
