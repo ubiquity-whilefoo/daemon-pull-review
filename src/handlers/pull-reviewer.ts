@@ -12,7 +12,7 @@ import ms from "ms";
 
 export class PullReviewer {
   readonly context: Context;
-  private _reviewInterval: number | null = null;
+  private readonly _reviewInterval: number | null = null;
 
   constructor(context: Context) {
     this.context = context;
