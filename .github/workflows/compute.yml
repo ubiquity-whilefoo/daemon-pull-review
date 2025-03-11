@@ -1,7 +1,6 @@
 name: "Claude 3.5 Sonnet Pull Request Reviewer"
 
 on:
-  push:
   workflow_dispatch:
     inputs:
       stateId:
