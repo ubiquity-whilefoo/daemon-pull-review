@@ -1,14 +1,14 @@
-import { createPullSpecContextBlockSection } from "../helpers/format-spec-and-pull";
-import { fetchIssue } from "../helpers/issue-fetching";
-import { CodeReviewStatus, Issue } from "../types/github-types";
-import { findGroundTruths } from "./ground-truths/find-ground-truths";
-import { Context } from "../types";
-import { CallbackResult } from "../types/proxy";
-import { closedByPullRequestsReferences, IssuesClosedByThisPr } from "../helpers/gql-queries";
-import { createCodeReviewSysMsg, llmQuery } from "./prompt";
-import { encodeAsync } from "../helpers/pull-helpers/pull-request-parsing";
-import { TokenLimits } from "../types/llm";
 import ms from "ms";
+import { createPullSpecContextBlockSection } from "../helpers/format-spec-and-pull";
+import { closedByPullRequestsReferences, IssuesClosedByThisPr } from "../helpers/gql-queries";
+import { fetchIssue } from "../helpers/issue-fetching";
+import { encodeAsync } from "../helpers/pull-helpers/pull-request-parsing";
+import { Context } from "../types";
+import { CodeReviewStatus, Issue } from "../types/github-types";
+import { TokenLimits } from "../types/llm";
+import { CallbackResult } from "../types/proxy";
+import { findGroundTruths } from "./ground-truths/find-ground-truths";
+import { createCodeReviewSysMsg, llmQuery } from "./prompt";
 
 export class PullReviewer {
   readonly context: Context;
@@ -148,15 +148,14 @@ export class PullReviewer {
 
     logger.info(`${repository.owner.login}/${repository.name}#${number} - ${action}`);
 
-    const timeline = await this.context.octokit.paginate(this.context.octokit.rest.issues.listEvents, {
+    const reviews = await this.context.octokit.paginate(this.context.octokit.rest.pulls.listReviews, {
       owner: owner.login,
       repo: name,
-      issue_number: number,
+      pull_number: number,
       per_page: 100,
     });
 
-    const reviews = timeline.filter((event) => event.event === "reviewed");
-    const botReviews = reviews.filter((review) => review.actor.type === "Bot");
+    const botReviews = reviews.filter((review) => review.user?.type === "Bot");
 
     if (!botReviews.length) {
       logger.info("No bot reviews found");
@@ -164,13 +163,18 @@ export class PullReviewer {
     }
 
     const lastReview = botReviews[botReviews.length - 1];
-    const lastReviewDate = new Date(lastReview.created_at);
+    if (!lastReview.submitted_at) {
+      return true;
+    }
+    const lastReviewDate = new Date(lastReview.submitted_at);
     const now = new Date();
     const diff = now.getTime() - lastReviewDate.getTime();
 
     if (this._reviewInterval && diff < this._reviewInterval) {
       await this.convertPullToDraft();
-      throw this.context.logger.error(`Review interval not met, skipping review. Last review was ${ms(diff, { long: true })} ago`);
+      throw this.context.logger.error(
+        `Review interval not met, next review available in ${ms(this._reviewInterval - diff, { long: true })}. Last review was ${ms(diff, { long: true })} ago`
+      );
     }
 
     logger.info(`Review interval met, proceeding with review. Last review was ${ms(diff, { long: true })} ago`);

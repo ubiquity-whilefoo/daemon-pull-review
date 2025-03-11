@@ -1,17 +1,17 @@
-import { db } from "./__mocks__/db";
-import { server } from "./__mocks__/node";
-import usersGet from "./__mocks__/users-get.json";
-import { describe, beforeAll, beforeEach, afterAll, afterEach, it, jest, expect } from "@jest/globals";
-import { Context, SupportedEvents } from "../src/types";
-import { Issue } from "../src/types/github-types";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { drop } from "@mswjs/data";
-import issueTemplate from "./__mocks__/issue-template";
-import repoTemplate from "./__mocks__/repo-template";
 import { Octokit } from "@octokit/rest";
-import { CompletionsType } from "../src/adapters/open-router/helpers/completions";
-import pullTemplate from "./__mocks__/pull-template";
 import { Logs } from "@ubiquity-os/ubiquity-os-logger";
 import ms from "ms";
+import { CompletionsType } from "../src/adapters/open-router/helpers/completions";
+import { Context, SupportedEvents } from "../src/types";
+import { Issue } from "../src/types/github-types";
+import { db } from "./__mocks__/db";
+import issueTemplate from "./__mocks__/issue-template";
+import { server } from "./__mocks__/node";
+import pullTemplate from "./__mocks__/pull-template";
+import repoTemplate from "./__mocks__/repo-template";
+import usersGet from "./__mocks__/users-get.json";
 // Mock constants
 const MOCK_ANSWER_PASSED = `{"confidenceThreshold": 1, "reviewComment": "passed"}`;
 
@@ -87,9 +87,7 @@ describe("Pull Reviewer tests", () => {
       const context = createContext();
       const pullReviewer = new PullReviewer(context);
 
-      jest
-        .spyOn(pullReviewer.context.octokit, "paginate")
-        .mockResolvedValue([{ event: "reviewed", actor: { type: "Bot" }, created_at: new Date().toISOString() }]);
+      jest.spyOn(pullReviewer.context.octokit, "paginate").mockResolvedValue([{ user: { type: "Bot" }, submitted_at: new Date().toISOString() }]);
 
       await expect(pullReviewer.canPerformReview()).rejects.toMatchObject({
         logMessage: {
@@ -107,9 +105,7 @@ describe("Pull Reviewer tests", () => {
       const oldDate = new Date();
       oldDate.setHours(oldDate.getHours() - 25);
 
-      jest
-        .spyOn(pullReviewer.context.octokit, "paginate")
-        .mockResolvedValue([{ event: "reviewed", actor: { type: "Bot" }, created_at: oldDate.toISOString() }]);
+      jest.spyOn(pullReviewer.context.octokit, "paginate").mockResolvedValue([{ user: { type: "Bot" }, submitted_at: oldDate.toISOString() }]);
 
       expect(await pullReviewer.canPerformReview()).toBe(true);
     });
