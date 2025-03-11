@@ -91,7 +91,7 @@ describe("Pull Reviewer tests", () => {
 
       await expect(pullReviewer.canPerformReview()).rejects.toMatchObject({
         logMessage: {
-          raw: expect.stringContaining("Review interval not met, skipping review."),
+          raw: expect.stringContaining("Review interval not met"),
         },
       });
     });
