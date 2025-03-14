@@ -220,7 +220,7 @@ export class PullReviewer {
     } = this.context;
 
     const taskSpecifications: string[] = [];
-    const issues = await this.getTasksFromPullRequest(this.context);
+    const issues = await this.getTasksFromPullRequest();
     if (!issues) return null;
 
     issues.forEach((issue) => {
@@ -277,16 +277,7 @@ export class PullReviewer {
         pr_number,
       });
 
-      const closingIssues = result.repository.pullRequest.closingIssuesReferences.edges.map((edge) => ({
-        number: edge.node.number,
-        title: edge.node.title,
-        url: edge.node.url,
-        body: edge.node.body,
-        repository: {
-          name: edge.node.name,
-          owner: edge.node.owner,
-        },
-      }));
+      const closingIssues = result.repository.pullRequest.closingIssuesReferences.edges.map((edge) => edge.node);
 
       if (closingIssues.length > 0) {
         return {
@@ -307,37 +298,41 @@ export class PullReviewer {
       };
     }
   }
-  async getTasksFromPullRequest(context: Context) {
+
+  async getTasksFromPullRequest() {
     const {
       payload: { pull_request },
-    } = context;
+      logger,
+      octokit,
+    } = this.context;
 
-    const { issues: closingIssues } = await this.checkIfPrClosesIssues(context.octokit, {
+    const { issues: closingIssues } = await this.checkIfPrClosesIssues(octokit, {
       owner: pull_request.base.repo.owner.login,
       repo: pull_request.base.repo.name,
       pr_number: pull_request.number,
     });
+    logger.info(`Found ${closingIssues.length} linked issues`, { closingIssues });
 
     if (closingIssues.length === 0) {
-      this.context.logger.info("You need to link an issue before converting the pull request to ready for review.");
+      logger.info("You need to link an issue before converting the pull request to ready for review.");
       return null;
     }
 
     if (!closingIssues.every((issue) => issue.number)) {
-      throw this.context.logger.error("Task number not found", { pull_request });
+      throw logger.error("Task number not found", { pull_request });
     }
 
     const issues = (await Promise.all(
       closingIssues.map(async (issue) => {
         const issueNumber = issue.number;
         const issueRepo = issue.repository.name;
-        const issueOwner = issue.repository.owner;
+        const issueOwner = issue.repository.owner.login;
         return fetchIssue(this.context, issueNumber, issueOwner, issueRepo);
       })
     )) as Issue[];
 
     if (issues.some((issue) => !issue) || !issues) {
-      throw this.context.logger.error(`Error fetching issue, aborting`, {
+      throw logger.error(`Error fetching issue, aborting`, {
         owner: this.context.payload.repository.owner.login,
         repo: this.context.payload.repository.name,
         issues: issues.map((issue) => issue.url),
