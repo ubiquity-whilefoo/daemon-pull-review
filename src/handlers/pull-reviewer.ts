@@ -118,10 +118,10 @@ export class PullReviewer {
    */
   async submitCodeReview(review: string | undefined, status: CodeReviewStatus): Promise<void> {
     const { logger, payload } = this.context;
-    const { number, organization, repository, action, sender } = payload;
+    const { number, repository, action, sender } = payload;
     const { owner, name } = repository;
 
-    logger.info(`${organization}/${repository}#${number} - ${action} - ${sender?.login} - ${review}`);
+    logger.info(`${repository.owner.login}/${repository.name}#${number} - ${action} - ${sender?.login} - ${review}`);
 
     try {
       const response = await this.context.octokit.rest.pulls.createReview({
