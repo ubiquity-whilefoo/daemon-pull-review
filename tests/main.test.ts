@@ -59,6 +59,18 @@ describe("Pull Reviewer tests", () => {
       expect(result.reason).toContain("closed");
     });
 
+    it("should skip review if it was converted by a user who is not the PR author", async () => {
+      const { PullReviewer } = await import("../src/handlers/pull-reviewer");
+      const context = createContext();
+      context.payload.pull_request.user = db.users.findFirst({ where: { id: { equals: 1 } } }) as unknown as Context["payload"]["pull_request"]["user"];
+      context.payload.sender = db.users.findFirst({ where: { id: { equals: 2 } } }) as unknown as Context["payload"]["sender"];
+
+      const pullReviewer = new PullReviewer(context);
+      const result = await pullReviewer.performPullPrecheck();
+      expect(result.status).toBe(200);
+      expect(result.reason).toContain("Review wasn't requested by pull author");
+    });
+
     it("should handle successful review", async () => {
       const { PullReviewer } = await import("../src/handlers/pull-reviewer");
       const pullReviewer = new PullReviewer(createContext());
