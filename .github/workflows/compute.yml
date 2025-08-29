@@ -29,7 +29,7 @@ jobs:
 
     steps:
       - name: Decompress event payload
-        uses: ubiquity-os/compress-action
+        uses: ubiquity-os/compress-action@main
         id: eventPayload
         with:
           data: ${{ inputs.eventPayload }}
